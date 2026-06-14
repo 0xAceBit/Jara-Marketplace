@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jara | Instant Micro-task Stablecoin Nanopayments on Arc</title>
+  <meta name="description"
+    content="Jara connects small businesses with community members for instant micro-tasks, rewarding them with stablecoin nanopayments on Arc Network.">
+  <link rel="stylesheet" href="style.css">
+  <!-- Lucide Icons for vector-based premium icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+
+  <!-- Top Glassmorphism Navigation Bar -->
+  <header class="header-glass">
+    <nav class="nav-container">
+      <a href="#/" class="logo-container">
+        <div class="logo-icon">
+          <i data-lucide="zap"></i>
+        </div>
+        <span>Jara</span>
+      </a>
+
+      <!-- Desktop Navigation Links -->
+      <div class="nav-links">
+        <a href="#/" class="nav-link" id="nav-landing">Home</a>
+        <a href="#/marketplace" class="nav-link" id="nav-marketplace">Marketplace</a>
+        <a href="#/use-cases" class="nav-link" id="nav-use-cases">Use Cases</a>
+        <a href="#/create" class="nav-link" id="nav-create">Create Task</a>
+        <a href="#/my-tasks" class="nav-link" id="nav-my-tasks">My Tasks</a>
+        <a href="#/earnings" class="nav-link" id="nav-earnings">Earnings</a>
+        <a href="#/wallet" class="nav-link" id="nav-wallet">Wallet</a>
+      </div>
+
+      <!-- Navigation Actions -->
+      <div class="nav-actions">
+        <button class="theme-toggle" id="theme-toggle-btn" title="Toggle Dark/Light Mode">
+          <i data-lucide="sun" class="sun-icon"></i>
+        </button>
+        <button class="btn btn-wallet" id="wallet-connect-btn">
+          <i data-lucide="wallet"></i>
+          <span id="wallet-btn-text">Connect Wallet</span>
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Interactive Sandbox Simulator Controls -->
+  <div style="text-align: center; padding: 20px 24px 0 24px;">
+    <div class="role-banner">
+      <span style="font-size: 13px; font-weight: 600; color: var(--text-muted);">SIMULATION ROLE:</span>
+      <button class="role-btn active" id="role-earner-btn">Community Earner</button>
+      <button class="role-btn" id="role-business-btn">Business Creator</button>
+    </div>
+  </div>
+
+  <!-- Main View Container -->
+  <main id="app-root">
+    <!-- Active View Injected Dynamically by app.js -->
+    <div style="display: flex; align-items: center; justify-content: center; height: 300px;">
+      <div style="text-align: center; color: var(--text-secondary);">
+        <i data-lucide="loader" class="spin"
+          style="animation: spin 1s linear infinite; width: 48px; height: 48px; margin-bottom: 16px;"></i>
+        <p>Loading Jara Platform...</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-container">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-weight: 700; color: var(--text-primary);">Jara</span>
+        <span>&bull; Instant Stablecoin Nanopayments on Arc Network</span>
+      </div>
+      <div>
+        <span>&copy; 2026 Jara Platform. Designed for Local Trust and Access.</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ================= MODALS ================= -->
+
+  <!-- 1. Task View / Submission Modal -->
+  <div class="modal-overlay" id="task-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-task-title" style="font-size: 24px;">Task Title</h3>
+        <button class="btn-ghost" onclick="closeModal('task-modal')">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="modal-task-badge-container" style="margin-bottom: 16px;"></div>
+        <p id="modal-task-desc" style="color: var(--text-secondary); line-height: 1.5; margin-bottom: 20px;"></p>
+
+        <!-- Dynamic Escrow Progress Stepper -->
+        <div id="modal-escrow-status-container" style="margin-bottom: 20px;"></div>
+
+        <div style="background: var(--bg-app); padding: 16px; border-radius: var(--radius-sm); margin-bottom: 20px;">
+          <h4
+            style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; color: var(--text-muted);">
+            Instructions</h4>
+          <p id="modal-task-instructions" style="font-size: 14px; line-height: 1.5;"></p>
+        </div>
+
+        <div style="background: var(--bg-app); padding: 16px; border-radius: var(--radius-sm); margin-bottom: 20px;">
+          <h4
+            style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; color: var(--text-muted);">
+            Required Proof</h4>
+          <p id="modal-task-proof-req" style="font-size: 14px; line-height: 1.5; font-weight: 500;"></p>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px;">
+          <div>
+            <span style="font-size: 13px; color: var(--text-muted);">Reward Amount</span>
+            <div id="modal-task-reward"
+              style="font-size: 24px; font-weight: 800; color: var(--secondary); font-family: var(--font-heading);">
+            </div>
+          </div>
+          <div id="modal-task-actions">
+            <!-- Dynamic Buttons (Claim / Submit / Approve) -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Wallet Connectivity / Mock Faucet Modal -->
+  <div class="modal-overlay" id="wallet-modal">
+    <div class="modal-content" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 style="font-size: 22px;">Wallet Dashboard</h3>
+        <button class="btn-ghost" onclick="closeModal('wallet-modal')">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="wallet-modal-disconnected">
+          <p style="color: var(--text-secondary); margin-bottom: 24px; font-size: 14px;">Connect your Web3 wallet (such
+            as MetaMask) to the Arc Network. Stablecoin balance is fetched in USDC.</p>
+          <button class="btn btn-primary" id="modal-connect-wallet-btn" style="width: 100%;">
+            <i data-lucide="plug"></i> Connect Web3 Wallet
+          </button>
+        </div>
+        <div id="wallet-modal-connected" style="display: none;">
+          <div
+            style="background: var(--bg-app); padding: 20px; border-radius: var(--radius-md); margin-bottom: 24px; text-align: center;">
+            <span class="network-badge"
+              style="background: var(--primary-glow); color: var(--primary); margin-bottom: 12px;">Arc Testnet</span>
+            <div
+              style="font-size: 12px; color: var(--text-muted); font-family: monospace; word-break: break-all; margin-bottom: 12px;"
+              id="wallet-modal-address">0x...</div>
+            <div style="font-size: 32px; font-weight: 800; color: var(--secondary); font-family: var(--font-heading);"
+              id="wallet-modal-balance">0.00 USDC</div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <button class="btn btn-outline" id="wallet-modal-faucet-btn">
+              <i data-lucide="droplet"></i> Circle Faucet
+            </button>
+            <button class="btn btn-ghost" id="wallet-modal-disconnect-btn"
+              style="border: 1px solid transparent; color: var(--error);">
+              <i data-lucide="log-out"></i> Disconnect
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Blockchain Transaction Simulation Loader / Success Receipt -->
+  <div class="modal-overlay" id="tx-modal">
+    <div class="modal-content" style="max-width: 420px; text-align: center;">
+      <div class="modal-body" style="margin-bottom: 0;">
+        <div id="tx-loading-state">
+          <div style="display: inline-block; position: relative; width: 80px; height: 80px; margin-bottom: 20px;">
+            <i data-lucide="loader" class="spin"
+              style="animation: spin 1.5s linear infinite; width: 80px; height: 80px; color: var(--primary);"></i>
+            <i data-lucide="zap"
+              style="position: absolute; top: 24px; left: 24px; width: 32px; height: 32px; color: var(--secondary);"></i>
+          </div>
+          <h3 id="tx-loading-title" style="font-size: 20px; margin-bottom: 8px;">Processing Transaction</h3>
+          <p id="tx-loading-subtitle" style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">
+            Simulating zero-gas payment on Arc Network...</p>
+
+          <!-- Dynamic multi-step checklist injected here -->
+          <div id="tx-steps-container"></div>
+        </div>
+
+        <div id="tx-success-state" style="display: none;">
+          <div class="success-animation">
+            <div class="circle-check">
+              <i data-lucide="check"></i>
+            </div>
+          </div>
+          <h3 style="font-size: 22px; margin-bottom: 8px; color: var(--success);" id="tx-success-title">Payment
+            Confirmed!</h3>
+          <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;" id="tx-success-desc">Reward
+            successfully distributed via Arc Network.</p>
+
+          <div
+            style="background: var(--bg-app); padding: 16px; border-radius: var(--radius-sm); margin-bottom: 24px; text-align: left; font-size: 13px; font-family: monospace;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+              <span style="color: var(--text-muted);">Receipt ID:</span>
+              <span id="tx-receipt-id" style="color: var(--text-primary);">ARC-TX-9281...</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;" id="tx-escrow-address-row">
+              <span style="color: var(--text-muted);">Escrow Address:</span>
+              <span id="tx-escrow-address" style="color: var(--text-primary);">0x...</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+              <span style="color: var(--text-muted);">Amount:</span>
+              <span id="tx-receipt-amount" style="color: var(--secondary); font-weight: bold;">$0.15 USDC</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+              <span style="color: var(--text-muted);">Tx Ledger:</span>
+              <a href="#" id="tx-receipt-explorer-link" target="_blank"
+                style="color: var(--primary); text-decoration: underline; font-weight: 500;">View on ArcScan</a>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-muted);">Gas Paid:</span>
+              <span style="color: var(--success); font-weight: 500;">$0.00 (Gasless)</span>
+            </div>
+          </div>
+
+          <button class="btn btn-primary" onclick="closeModal('tx-modal')" style="width: 100%;">
+            Awesome
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Keyframes for loader spin animation -->
+  <style>
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    .spin {
+      animation: spin 1s linear infinite;
+    }
+  </style>
+
+  <!-- Application script -->
+  <script src="app.js"></script>
+</body>
+
+</html>
