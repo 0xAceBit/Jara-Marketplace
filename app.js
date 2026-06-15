@@ -20,37 +20,26 @@ const STATE = {
 
 // --- REAL TRANSACTION HELPERS ---
 const USDC_CONTRACT_ADDRESS = '0x3600000000000000000000000000000000000000';
-const ESCROW_HOLDING_ADDRESS = '0x3d7ffed295e555052233544ba74eaa1c0920fa20'; // Agent Wallet Address
 
-function encodeERC20Transfer(toAddress, amountUSD) {
-  const selector = '0xa9059cbb';
-  const cleanAddress = toAddress.toLowerCase().replace(/^0x/, '');
-  const paddedAddress = cleanAddress.padStart(64, '0');
-  const amountUnits = Math.round(amountUSD * 1000000);
-  const amountHex = amountUnits.toString(16);
-  const paddedAmount = amountHex.padStart(64, '0');
-  return '0x' + selector + paddedAddress + paddedAmount;
-}
+/**
+ * ESCROW_HOLDING_ADDRESS (Agent Wallet Address)
+ * 
+ * In the Jara Escrow Architecture, this address acts as the centralized hold vault
+ * on behalf of the Paymaster system.
+ * 
+ * Paymaster/Session Key Logic:
+ * 1. Businesses lock rewards by depositing USDC to this escrow holding address.
+ * 2. When an Earner completes a task, the platform validates their proof of work.
+ * 3. Once approved, the platform acts as a gas relayer: it triggers a sponsored L2 transfer
+ *    to pay out the exact reward directly from this vault to the Earner's EVM address.
+ * 4. By having the platform server or escrow contract host the session credentials, gas fees
+ *    are fully sponsored, ensuring sub-cent payouts don't suffer from transaction fee friction.
+ */
+const ESCROW_HOLDING_ADDRESS = '0x3d7ffed295e555052233544ba74eaa1c0920fa20';
 
-async function waitForTxReceipt(txHash) {
-  const maxAttempts = 30; // Wait up to 30 seconds
-  for (let i = 0; i < maxAttempts; i++) {
-    const receipt = await window.ethereum.request({
-      method: 'eth_getTransactionReceipt',
-      params: [txHash],
-    });
-    if (receipt) {
-      const statusInt = parseInt(receipt.status, 16);
-      if (statusInt === 1 || receipt.status === '0x1' || receipt.status === true) {
-        return receipt;
-      } else {
-        throw new Error("Transaction reverted on-chain");
-      }
-    }
-    await new Promise(resolve => setTimeout(resolve, 1000));
-  }
-  throw new Error("Transaction timeout waiting for confirmation");
-}
+// --- OPEN SOURCE PRIMITIVES IMPORTED FROM lib/arc-utils.js ---
+// encodeERC20Transfer, waitForTxReceipt, and calculateHaversineDistance are now
+// imported from lib/arc-utils.js and accessed via window.ArcUtils namespace.
 
 // --- INITIALIZE APPLICATION ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -538,17 +527,7 @@ function executeMockGPSCheckIn(targetLat, targetLon) {
   }
 
   const processLocation = (lat, lon) => {
-    const R = 6371e3; // metres
-    const phi1 = lat * Math.PI / 180;
-    const phi2 = targetLat * Math.PI / 180;
-    const deltaPhi = (targetLat - lat) * Math.PI / 180;
-    const deltaLambda = (targetLon - lon) * Math.PI / 180;
-
-    const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
-      Math.cos(phi1) * Math.cos(phi2) *
-      Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distanceMeters = Math.round(R * c);
+    const distanceMeters = ArcUtils.calculateHaversineDistance(lat, lon, targetLat, targetLon);
 
     if (latVal) latVal.value = lat.toFixed(6);
     if (lonVal) lonVal.value = lon.toFixed(6);
@@ -1797,7 +1776,7 @@ async function executeRealTransaction(to, data, amount, actionDesc, callback) {
 
     // Step 3: Confirming block settlement
     setStep(3, 'pending');
-    const receipt = await waitForTxReceipt(txHash);
+    const receipt = await ArcUtils.waitForTxReceipt(txHash);
     setStep(3, 'completed');
 
     // Show Success Modal
@@ -1857,7 +1836,7 @@ function handleCreateTaskSubmit(event) {
   }
 
   // Real USDC transfer data:
-  const data = encodeERC20Transfer(ESCROW_HOLDING_ADDRESS, totalCost);
+  const data = ArcUtils.encodeERC20Transfer(ESCROW_HOLDING_ADDRESS, totalCost);
 
   executeRealTransaction(
     USDC_CONTRACT_ADDRESS,
@@ -2131,7 +2110,7 @@ async function approveSubmission(subId) {
   const task = STATE.tasks.find(t => t.id === sub.taskId);
 
   // Real USDC transfer reward data:
-  const data = encodeERC20Transfer(sub.earnerAddress, sub.reward);
+  const data = ArcUtils.encodeERC20Transfer(sub.earnerAddress, sub.reward);
 
   executeRealTransaction(
     USDC_CONTRACT_ADDRESS,

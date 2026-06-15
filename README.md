@@ -64,6 +64,33 @@ A real-time metrics dashboard displaying the macro-economics of the micro-work n
 
 ---
 
+## Fork & Go: Reusable Primitives
+
+Jara exposes standalone, lightweight Web3 and validation primitives inside [arc-utils.js](file:///c:/Users/ACE/OneDrive/Desktop/Jara/lib/arc-utils.js) that you can drop into any vanilla L2 browser codebase.
+
+### 1. Gasless Stablecoin Transfer Encoder
+Encode a USDC transfer payload without importing heavy external libraries:
+```javascript
+// Returns transaction bytecode payload for transfer(address,uint256)
+const callData = ArcUtils.encodeERC20Transfer(toAddress, amountUSD);
+```
+
+### 2. EIP-1193 RPC Receipt Poller
+Await on-chain confirmations directly via browser provider JSON-RPC requests:
+```javascript
+// Polls RPC recursively until mined
+const receipt = await ArcUtils.waitForTxReceipt(txHash);
+```
+
+### 3. Geolocation Proximity Check
+Compute distances between user GPS positions and target checkpoints using client-side Haversine metrics:
+```javascript
+// Distance computed in meters
+const distanceMeters = ArcUtils.calculateHaversineDistance(lat1, lon1, lat2, lon2);
+```
+
+---
+
 ## Technical Specifications
 
 ### Tech Stack
