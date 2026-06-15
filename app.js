@@ -1756,6 +1756,18 @@ async function executeRealTransaction(to, data, amount, actionDesc, callback) {
     await new Promise(resolve => setTimeout(resolve, 600));
     setStep(0, 'completed');
 
+    // Validation of transaction calldata before execution
+    if (data) {
+      console.log("Final calldata before execution:", data);
+      if (data.startsWith("0x0x")) {
+        throw new Error("Invalid calldata: starts with duplicate '0x0x' prefix.");
+      }
+      const hexRegex = /^0x[0-9a-fA-F]*$/;
+      if (!hexRegex.test(data)) {
+        throw new Error("Invalid calldata: not a valid hexadecimal string.");
+      }
+    }
+
     // Step 1: Awaiting MetaMask approval
     setStep(1, 'pending');
     const transactionParameters = {
