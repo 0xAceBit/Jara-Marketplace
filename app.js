@@ -18,6 +18,47 @@ const STATE = {
   transactions: []
 };
 
+// --- CENTRALIZED TASK SYNC & PERSISTENCE ---
+const STORAGE_URL = 'https://kvdb.io/jara_marketplace_tasks_v2/tasks';
+
+async function fetchTasks() {
+  try {
+    const res = await fetch(STORAGE_URL);
+    if (res.ok) {
+      const text = await res.text();
+      return JSON.parse(text);
+    }
+  } catch (e) {
+    console.warn("Failed to fetch remote tasks, falling back to cache:", e);
+  }
+  try {
+    const local = localStorage.getItem('jara-tasks');
+    if (local) return JSON.parse(local);
+  } catch (e) {}
+  return [];
+}
+
+async function saveTasks(tasks) {
+  try {
+    localStorage.setItem('jara-tasks', JSON.stringify(tasks));
+  } catch (e) {}
+  try {
+    await fetch(STORAGE_URL, {
+      method: 'POST',
+      body: JSON.stringify(tasks)
+    });
+  } catch (e) {
+    console.warn("Failed to save remote tasks:", e);
+  }
+}
+
+async function syncTasksFromStorage() {
+  const remoteTasks = await fetchTasks();
+  if (remoteTasks && Array.isArray(remoteTasks)) {
+    STATE.tasks = remoteTasks;
+  }
+}
+
 // --- REAL TRANSACTION HELPERS ---
 const USDC_CONTRACT_ADDRESS = '0x3600000000000000000000000000000000000000';
 
@@ -65,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupEthereumProviderListeners();
 
   // Initial Route Load
-  handleRoute();
+  syncTasksFromStorage().then(() => handleRoute());
 });
 
 // --- LIGHT/DARK THEME TOGGLE ---
@@ -118,18 +159,22 @@ function handleRoute() {
   if (hash === '#/') {
     document.getElementById('nav-landing')?.classList.add('active');
     renderLandingView(appRoot);
+    syncTasksFromStorage().then(() => renderLandingView(appRoot));
   } else if (hash === '#/marketplace') {
     document.getElementById('nav-marketplace')?.classList.add('active');
     renderMarketplaceView(appRoot);
+    syncTasksFromStorage().then(() => renderMarketplaceView(appRoot));
   } else if (hash === '#/create') {
     document.getElementById('nav-create')?.classList.add('active');
     renderCreateTaskView(appRoot);
   } else if (hash === '#/my-tasks') {
     document.getElementById('nav-my-tasks')?.classList.add('active');
     renderMyTasksView(appRoot);
+    syncTasksFromStorage().then(() => renderMyTasksView(appRoot));
   } else if (hash === '#/earnings') {
     document.getElementById('nav-earnings')?.classList.add('active');
     renderEarningsView(appRoot);
+    syncTasksFromStorage().then(() => renderEarningsView(appRoot));
   } else if (hash === '#/wallet') {
     document.getElementById('nav-wallet')?.classList.add('active');
     renderWalletView(appRoot);
@@ -139,6 +184,7 @@ function handleRoute() {
   } else if (hash === '#/nanopay-engine') {
     document.getElementById('nav-nanopay-engine')?.classList.add('active');
     renderNanoPayEngineView(appRoot);
+    syncTasksFromStorage().then(() => renderNanoPayEngineView(appRoot));
   } else {
     appRoot.innerHTML = `<div style="text-align: center; padding: 100px 0;"><h2>404 - View Not Found</h2><a href="#/" class="btn btn-primary" style="margin-top:20px;">Back Home</a></div>`;
   }
@@ -1319,7 +1365,7 @@ function renderMarketplaceView(container) {
     <div class="marketplace-header">
       <div>
         <h1 style="font-size: 36px; margin-bottom: 4px;">Task Marketplace</h1>
-        <p style="color: var(--text-secondary);">Coordinate hyper-local micro-work and earn stablecoin nanopayments settled gaslessly on the Arc Network.</p>
+        <p style="color: var(--text-secondary);">Coordinate hyper local micro work and earn stablecoin nanopayments settled gaslessly on the Arc Network.</p>
       </div>
       <div style="background: var(--bg-card); padding: 8px 16px; border-radius: var(--radius-full); border: 1px solid var(--border-color); font-size: 13px; color: var(--text-secondary);">
         Role Perspective: <strong style="color: var(--primary);">${STATE.role === 'earner' ? 'Earner (Browse & Claim)' : 'Business Creator (Preview Mode)'}</strong>
@@ -1895,6 +1941,7 @@ function handleCreateTaskSubmit(event) {
       }
 
       STATE.tasks.unshift(newTask);
+      saveTasks(STATE.tasks);
 
       // Add transaction history record
       STATE.transactions.unshift({
@@ -2136,6 +2183,7 @@ async function approveSubmission(subId) {
       // Find task and update counts
       if (task) {
         task.completedCount = Math.min(task.limit, task.completedCount + 1);
+        await saveTasks(STATE.tasks);
       }
 
       // Update earner claim status if this matches local earner simulation address
