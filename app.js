@@ -18,37 +18,53 @@ const STATE = {
   transactions: []
 };
 
-// --- CENTRALIZED TASK SYNC & PERSISTENCE ---
-const STORAGE_URL = 'https://kvdb.io/jara_marketplace_tasks_v2/tasks';
+// --- CENTRALIZED TASK SYNC & PERSISTENCE (SUPABASE) ---
+const SUPABASE_URL = 'YOUR_SUPABASE_URL'; // Replace with your Supabase project URL
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // Replace with your Supabase anon key
+
+let supabaseClient = null;
+if (typeof supabase !== 'undefined' && SUPABASE_URL !== 'YOUR_SUPABASE_URL' && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY') {
+  try {
+    supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  } catch (err) {
+    console.error("Failed to initialize Supabase client:", err);
+  }
+}
 
 async function fetchTasks() {
-  try {
-    const res = await fetch(STORAGE_URL);
-    if (res.ok) {
-      const text = await res.text();
-      return JSON.parse(text);
+  if (supabaseClient) {
+    try {
+      const { data, error } = await supabaseClient
+        .from('tasks')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!error && data) return data;
+      console.warn("Supabase fetch failed, falling back to cache:", error);
+    } catch (e) {
+      console.warn("Supabase fetch exception, falling back to cache:", e);
     }
-  } catch (e) {
-    console.warn("Failed to fetch remote tasks, falling back to cache:", e);
   }
   try {
     const local = localStorage.getItem('jara-tasks');
     if (local) return JSON.parse(local);
-  } catch (e) {}
+  } catch (e) { }
   return [];
 }
 
-async function saveTasks(tasks) {
+async function saveTasks(tasks, taskToUpsert = null) {
   try {
     localStorage.setItem('jara-tasks', JSON.stringify(tasks));
-  } catch (e) {}
-  try {
-    await fetch(STORAGE_URL, {
-      method: 'POST',
-      body: JSON.stringify(tasks)
-    });
-  } catch (e) {
-    console.warn("Failed to save remote tasks:", e);
+  } catch (e) { }
+
+  if (supabaseClient && taskToUpsert) {
+    try {
+      const { error } = await supabaseClient
+        .from('tasks')
+        .upsert(taskToUpsert);
+      if (error) console.warn("Supabase upsert failed:", error);
+    } catch (e) {
+      console.warn("Supabase upsert exception:", e);
+    }
   }
 }
 
@@ -1941,7 +1957,7 @@ function handleCreateTaskSubmit(event) {
       }
 
       STATE.tasks.unshift(newTask);
-      saveTasks(STATE.tasks);
+      saveTasks(STATE.tasks, newTask);
 
       // Add transaction history record
       STATE.transactions.unshift({
@@ -2183,7 +2199,7 @@ async function approveSubmission(subId) {
       // Find task and update counts
       if (task) {
         task.completedCount = Math.min(task.limit, task.completedCount + 1);
-        await saveTasks(STATE.tasks);
+        await saveTasks(STATE.tasks, task);
       }
 
       // Update earner claim status if this matches local earner simulation address
