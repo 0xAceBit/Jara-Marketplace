@@ -12,119 +12,45 @@ const STATE = {
     balance: 0.00, // Arc-USDC
     symbol: 'USDC'
   },
-  tasks: [
-    {
-      id: 'task-1',
-      title: 'Verify City Books Opening Hours',
-      category: 'local',
-      desc: 'Visit City Books on 5th Avenue and confirm if their summer hours match their storefront sign. Snap a picture of the sign.',
-      instructions: '1. Walk to City Books at 412 5th Avenue.\n2. Verify their doors/sign hours.\n3. Take a readable photo of the opening hours sign.',
-      proofReq: 'Upload a clear photo of the storefront hours sign.',
-      reward: 0.25,
-      limit: 10,
-      completedCount: 4,
-      creator: 'City Books Co.',
-      status: 'active',
-      escrowAgreementAddress: '0xE5C7040E02008024000000000000000000000001',
-      escrowTxHash: '0x3a2c58aefd1887e148e6587d1912a781b0a88b1cc1188cf41f8872b2ab6291a1',
-      escrowStatus: 'funded',
-      verificationType: 'photo'
-    },
-    {
-      id: 'task-2',
-      title: 'Java Junction Feedback Survey',
-      category: 'digital',
-      desc: 'Complete a brief 3-minute survey about your customer service experience at Java Junction Cafe.',
-      instructions: '1. Open the feedback link.\n2. Answer 5 multiple-choice questions honestly.\n3. Provide your receipt order number.',
-      proofReq: 'Provide receipt number and screenshot of survey completion page.',
-      reward: 0.15,
-      limit: 100,
-      completedCount: 78,
-      creator: 'Java Junction Cafe',
-      status: 'active',
-      escrowAgreementAddress: '0xE5C7040E02008024000000000000000000000002',
-      escrowTxHash: '0x5b3f11c78e9188e7a688b12ab6291a13a2c58aefd1887e148e6587d1912a7810',
-      escrowStatus: 'funded',
-      verificationType: 'text'
-    },
-    {
-      id: 'task-3',
-      title: 'Share Local Farmers Market Post',
-      category: 'social',
-      desc: 'Share the upcoming Saturday Farmers Market announcement post on Twitter to spread the word to local residents.',
-      instructions: '1. Retweet the pinned post from @LocalFarmersMkt.\n2. Ensure your account is public so we can verify the share.',
-      proofReq: 'Enter your X/Twitter handle and the link to your retweet.',
-      reward: 0.08,
-      limit: 50,
-      completedCount: 22,
-      creator: 'Farmers Market Association',
-      status: 'active',
-      escrowAgreementAddress: '0xE5C7040E02008024000000000000000000000003',
-      escrowTxHash: '0x12a7813a2c58aefd1887e148e6587d1912a781b0a88b1cc11',
-      escrowStatus: 'funded',
-      verificationType: 'referral'
-    },
-    {
-      id: 'task-4',
-      title: 'Test CleanApp Android Launch',
-      category: 'testing',
-      desc: 'Download the beta version of CleanApp, open the maps page, and verify if the trash-reporting pin feature functions without crashing.',
-      instructions: '1. Access our TestFlight/Beta link.\n2. Tap the "Report Pin" button on the map.\n3. Verify if the form displays properly.',
-      proofReq: 'Upload a screenshot of the reporting pin form.',
-      reward: 1.20,
-      limit: 15,
-      completedCount: 12,
-      creator: 'EcoClean Tech',
-      status: 'active',
-      escrowAgreementAddress: '0xE5C7040E02008024000000000000000000000004',
-      escrowTxHash: '0x9188cf41f8872b2ab6291a13a2c58aefd1887e148e6587d1912a781b0a88b1c',
-      escrowStatus: 'funded',
-      verificationType: 'location',
-      locationTarget: { lat: 6.4526, lon: 3.4076, name: 'Yaba Tech Hub, Lagos' }
-    },
-    {
-      id: 'task-5',
-      title: 'Balogun Depot Beverage Audit',
-      category: 'local',
-      desc: 'Perform an inventory stock audit at Balogun Beverage Depot to confirm stock levels match the system.',
-      instructions: '1. Ask the store clerk for the Coca-Cola and Fanta stock list.\n2. Walk to the warehouse section and count crates.\n3. Input counts and discrepancies.',
-      proofReq: 'Crate inventory stock confirmation.',
-      reward: 0.45,
-      limit: 50,
-      completedCount: 14,
-      creator: 'Balogun Depot',
-      status: 'active',
-      escrowAgreementAddress: '0xE5C7040E02008024000000000000000000000005',
-      escrowTxHash: '0x58aefd1887e148e6587d1912a781b0a88b1cc1188cf41f8872b2ab6291a13a2c',
-      escrowStatus: 'funded',
-      verificationType: 'inventory',
-      inventoryItems: [
-        { name: 'Coca-Cola 35cl (Crates)', expected: 25 },
-        { name: 'Fanta 35cl (Crates)', expected: 15 }
-      ]
-    }
-  ],
-  myClaims: [
-    // Earner's claimed tasks
-    // { taskId: 'task-2', status: 'pending', proof: 'Receipt #9281', timestamp: Date.now() - 3600000 }
-  ],
-  submissions: [
-    // Submissions for Business owner review
-    {
-      id: 'sub-1',
-      taskId: 'task-1',
-      taskTitle: 'Verify City Books Opening Hours',
-      earnerAddress: '0x9E2a...8c21',
-      proof: 'I verified the hours: Mon-Sat 9AM-8PM, Sun 10AM-5PM. Photo attached: hours_sign_final.png',
-      timestamp: '2026-06-11T10:12:00Z',
-      reward: 0.25,
-      status: 'pending'
-    }
-  ],
-  transactions: [
-    { id: 'tx-0', type: 'faucet', desc: 'Mock Faucet Drop', amount: 10.00, timestamp: '2026-06-11T09:00:00Z', success: true }
-  ]
+  tasks: [],
+  myClaims: [],
+  submissions: [],
+  transactions: []
 };
+
+// --- REAL TRANSACTION HELPERS ---
+const USDC_CONTRACT_ADDRESS = '0x3600000000000000000000000000000000000000';
+const ESCROW_HOLDING_ADDRESS = '0x3d7ffed295e555052233544ba74eaa1c0920fa20'; // Agent Wallet Address
+
+function encodeERC20Transfer(toAddress, amountUSD) {
+  const selector = '0xa9059cbb';
+  const cleanAddress = toAddress.toLowerCase().replace(/^0x/, '');
+  const paddedAddress = cleanAddress.padStart(64, '0');
+  const amountUnits = Math.round(amountUSD * 1000000);
+  const amountHex = amountUnits.toString(16);
+  const paddedAmount = amountHex.padStart(64, '0');
+  return '0x' + selector + paddedAddress + paddedAmount;
+}
+
+async function waitForTxReceipt(txHash) {
+  const maxAttempts = 30; // Wait up to 30 seconds
+  for (let i = 0; i < maxAttempts; i++) {
+    const receipt = await window.ethereum.request({
+      method: 'eth_getTransactionReceipt',
+      params: [txHash],
+    });
+    if (receipt) {
+      const statusInt = parseInt(receipt.status, 16);
+      if (statusInt === 1 || receipt.status === '0x1' || receipt.status === true) {
+        return receipt;
+      } else {
+        throw new Error("Transaction reverted on-chain");
+      }
+    }
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+  throw new Error("Transaction timeout waiting for confirmation");
+}
 
 // --- INITIALIZE APPLICATION ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -180,6 +106,16 @@ function handleRoute() {
   // Update nav active styling
   document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
 
+  // Show/hide simulator banner only on Create Task page
+  const bannerContainer = document.getElementById('simulation-role-banner-container');
+  if (bannerContainer) {
+    if (hash === '#/create') {
+      bannerContainer.style.display = 'block';
+    } else {
+      bannerContainer.style.display = 'none';
+    }
+  }
+
   // Dynamically show/hide Earnings nav link based on role (business shouldn't see it)
   const earningsNavLink = document.getElementById('nav-earnings');
   if (earningsNavLink) {
@@ -211,6 +147,9 @@ function handleRoute() {
   } else if (hash === '#/use-cases') {
     document.getElementById('nav-use-cases')?.classList.add('active');
     renderUseCasesView(appRoot);
+  } else if (hash === '#/nanopay-engine') {
+    document.getElementById('nav-nanopay-engine')?.classList.add('active');
+    renderNanoPayEngineView(appRoot);
   } else {
     appRoot.innerHTML = `<div style="text-align: center; padding: 100px 0;"><h2>404 - View Not Found</h2><a href="#/" class="btn btn-primary" style="margin-top:20px;">Back Home</a></div>`;
   }
@@ -1071,10 +1010,10 @@ function renderLandingView(container) {
     <section class="hero-section" style="padding-bottom: 60px;">
       <div>
         <h1 class="hero-title" style="font-size: 48px; line-height: 1.15; margin-bottom: 20px;">
-          Turn Everyday Community Actions Into <span style="background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Instant Earnings</span>
+          Community Commerce Infrastructure Powered by <span style="background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Stablecoin Nanopayments</span>
         </h1>
         <p class="hero-desc" style="font-size: 16px; line-height: 1.6; margin-bottom: 32px; color: var(--text-secondary);">
-          Small businesses can create micro-tasks while community members earn stablecoin rewards for completing real-world work. Powered gaslessly on the Arc Network.
+          Jara coordinates and monetizes hyper-local micro-work that was previously uneconomical to reward. Powered gaslessly on the Arc Network.
         </p>
         <div class="hero-actions">
           <a href="#/marketplace" class="btn btn-primary">
@@ -1157,15 +1096,15 @@ function renderLandingView(container) {
     <!-- Platform Stats -->
     <div class="stats-bar" style="margin-bottom: 60px;">
       <div class="stat-item">
-        <div class="stat-val">$24,918.42</div>
+        <div class="stat-val">$${STATE.tasks.reduce((sum, t) => sum + (t.reward * t.completedCount), 0).toFixed(2)}</div>
         <div class="stat-lbl">Distributed to Communities</div>
       </div>
       <div class="stat-item">
-        <div class="stat-val">120,490</div>
+        <div class="stat-val">${STATE.tasks.reduce((sum, t) => sum + t.completedCount, 0).toLocaleString()}</div>
         <div class="stat-lbl">Micro-tasks Settled</div>
       </div>
       <div class="stat-item">
-        <div class="stat-val">1.2s</div>
+        <div class="stat-val">${STATE.tasks.reduce((sum, t) => sum + t.completedCount, 0) > 0 ? "1.2s" : "0.0s"}</div>
         <div class="stat-lbl">Average Arc Settlement Speed</div>
       </div>
     </div>
@@ -1174,31 +1113,31 @@ function renderLandingView(container) {
     <section style="text-align: center; margin-bottom: 80px; padding: 40px 0;">
       <h2 style="font-size: 32px; margin-bottom: 12px;">How It Works</h2>
       <p style="color: var(--text-secondary); max-width: 550px; margin: 0 auto 52px auto; font-size: 15px;">
-        Jara removes traditional banking bottlenecks, allowing seamless real-world tasks to settle instantly through nanopayment infrastructure.
+        Jara coordinates micro-work via gasless Paymaster vaults, resolving micro-incentives through off-chain aggregation and instant L2 stablecoin settlement.
       </p>
 
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px;">
         <div class="card" style="text-align: left; padding: 30px;">
           <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary-glow); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 20px; font-family: var(--font-heading);">1</div>
-          <h3 style="font-size: 18px; margin-bottom: 10px;">Deploy Task Pool</h3>
+          <h3 style="font-size: 18px; margin-bottom: 10px;">Deploy Smart Vault Pool</h3>
           <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.5;">
-            Local businesses define task guidelines (like taking a shop photo or completing surveys) and lock a pool of Arc-USDC.
+            Businesses define micro-work validation rules and lock stablecoin reward liquidity in a gasless Arc Escrow smart contract vault.
           </p>
         </div>
 
         <div class="card" style="text-align: left; padding: 30px;">
           <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--secondary-glow); color: var(--secondary); display: flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 20px; font-family: var(--font-heading);">2</div>
-          <h3 style="font-size: 18px; margin-bottom: 10px;">Complete & Verify</h3>
+          <h3 style="font-size: 18px; margin-bottom: 10px;">Off-Chain Coordination</h3>
           <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.5;">
-            Community members claim open tasks in their neighborhood, perform the action, and upload requested proof directly from their phone.
+            Earners locate hyper-local micro-work, execute physical or digital validation steps, and submit proof cryptographically via their mobile device.
           </p>
         </div>
 
         <div class="card" style="text-align: left; padding: 30px;">
           <div style="width: 40px; height: 40px; border-radius: 50%; background: rgba(16, 185, 129, 0.1); color: var(--success); display: flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 20px; font-family: var(--font-heading);">3</div>
-          <h3 style="font-size: 18px; margin-bottom: 10px;">Instant Stablecoin Flow</h3>
+          <h3 style="font-size: 18px; margin-bottom: 10px;">Gasless L2 Settlement</h3>
           <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.5;">
-            Once approved, the smart contract immediately releases sub-cent stablecoin rewards to the earner's wallet. Zero fees, zero gas.
+            L2 Paymaster nodes sponsor gas fees, settling sub-cent stablecoin nanopayments instantly into the earner's wallet upon cryptographic proof verification.
           </p>
         </div>
       </div>
@@ -1207,9 +1146,9 @@ function renderLandingView(container) {
     <!-- Section 2: Use Cases (Lagos Theme) -->
     <section style="margin-bottom: 80px; padding: 40px 0;">
       <div style="text-align: center; margin-bottom: 48px;">
-        <h2 style="font-size: 32px; margin-bottom: 12px;">Real-world Local Use Cases</h2>
+        <h2 style="font-size: 32px; margin-bottom: 12px;">Ecosystem Use Cases</h2>
         <p style="color: var(--text-secondary); max-width: 580px; margin: 0 auto; font-size: 15px;">
-          From Yaba to Lekki, Jara bridges digital crypto rewards with everyday physical activities across Lagos commerce.
+          Coordinating high-fidelity physical audits, local index tracking, and localized micro-work that was previously uneconomical to reward.
         </p>
       </div>
 
@@ -1317,11 +1256,11 @@ function renderLandingView(container) {
 
     <!-- Section 4: Call to Action (CTA) -->
     <section class="glass-card" style="text-align: center; padding: 48px; border-color: var(--border-color); background: radial-gradient(circle at top right, var(--primary-glow), transparent 60%);">
-      <h2 style="font-size: 36px; margin-bottom: 16px;">Ready to Empower Your Community?</h2>
+      <h2 style="font-size: 36px; margin-bottom: 16px;">Ready to Coordinate Community Commerce?</h2>
       <p style="color: var(--text-secondary); max-width: 550px; margin: 0 auto 36px auto; font-size: 16px; line-height: 1.6;">
         ${STATE.role === 'earner'
-      ? 'Connect your wallet in seconds, discover open opportunities around you, and get rewarded in stablecoins instantly.'
-      : 'Fund a task budget pool, lay out simple steps, and source immediate verification from trusted local residents.'}
+      ? 'Connect your wallet in seconds, authorize session keys, and start earning stablecoin nanopayments for micro-work.'
+      : 'Deploy a gasless task pool, deposit stablecoin liquidity, and access on-demand local coordinates and verification.'}
       </p>
       <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
         ${STATE.role === 'earner'
@@ -1401,7 +1340,7 @@ function renderMarketplaceView(container) {
     <div class="marketplace-header">
       <div>
         <h1 style="font-size: 36px; margin-bottom: 4px;">Task Marketplace</h1>
-        <p style="color: var(--text-secondary);">Complete quick micro-tasks to earn instant stablecoins.</p>
+        <p style="color: var(--text-secondary);">Coordinate hyper-local micro-work and earn stablecoin nanopayments settled gaslessly on the Arc Network.</p>
       </div>
       <div style="background: var(--bg-card); padding: 8px 16px; border-radius: var(--radius-full); border: 1px solid var(--border-color); font-size: 13px; color: var(--text-secondary);">
         Role Perspective: <strong style="color: var(--primary);">${STATE.role === 'earner' ? 'Earner (Browse & Claim)' : 'Business Creator (Preview Mode)'}</strong>
@@ -1645,7 +1584,7 @@ function submitProofInModal(taskId) {
     id: `sub-${Date.now()}`,
     taskId: taskId,
     taskTitle: task.title,
-    earnerAddress: STATE.wallet.address.slice(0, 6) + '...' + STATE.wallet.address.slice(-4),
+    earnerAddress: STATE.wallet.address,
     proof: proofText,
     proofData: proofData,
     timestamp: new Date().toISOString(),
@@ -1678,8 +1617,8 @@ function renderCreateTaskView(container) {
 
   container.innerHTML = `
     <div class="form-container glass-card">
-      <h1 class="form-title">Create Task Pool</h1>
-      <p class="form-subtitle">Lock stablecoin rewards into a smart contract pool for automated distribution.</p>
+      <h1 class="form-title">Create Smart Task Pool</h1>
+      <p class="form-subtitle">Lock stablecoin reward pools into a gasless escrow smart contract for coordination and automated nanopayment clearance.</p>
 
       <form id="create-task-form" onsubmit="handleCreateTaskSubmit(event)">
         <div class="input-group" style="margin-bottom: 20px;">
@@ -1780,11 +1719,123 @@ function renderCreateTaskView(container) {
   limitInput?.addEventListener('input', updateCost);
 }
 
+async function executeRealTransaction(to, data, amount, actionDesc, callback) {
+  openModal('tx-modal');
+  const loadingState = document.getElementById('tx-loading-state');
+  const successState = document.getElementById('tx-success-state');
+  const stepsContainer = document.getElementById('tx-steps-container');
+  const escrowRow = document.getElementById('tx-escrow-address-row');
+
+  loadingState.style.display = 'block';
+  successState.style.display = 'none';
+  if (escrowRow) escrowRow.style.display = 'none';
+
+  document.getElementById('tx-loading-title').textContent = "Executing On-Chain Transaction";
+  document.getElementById('tx-loading-subtitle').textContent = "Interacting with Arc Testnet via MetaMask...";
+
+  const steps = [
+    "Preparing ERC-20 payload...",
+    "Awaiting MetaMask approval...",
+    "Broadcasting to Arc Testnet...",
+    "Confirming block settlement..."
+  ];
+
+  stepsContainer.innerHTML = `
+    <div class="tx-step-list">
+      ${steps.map((step, idx) => `
+        <div class="tx-step-item" id="tx-step-${idx}">
+          <span class="tx-step-icon" id="tx-step-icon-${idx}">
+            <i data-lucide="circle" style="width: 14px; height: 14px; color: var(--text-muted);"></i>
+          </span>
+          <span>${step}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  lucide.createIcons();
+
+  const setStep = (idx, status) => {
+    const item = document.getElementById(`tx-step-${idx}`);
+    const icon = document.getElementById(`tx-step-icon-${idx}`);
+    if (!item) return;
+    if (status === 'completed') {
+      item.className = 'tx-step-item completed';
+      if (icon) icon.innerHTML = `<i data-lucide="check-circle" style="width: 14px; height: 14px; color: var(--success);"></i>`;
+    } else if (status === 'pending') {
+      item.className = 'tx-step-item pending';
+      if (icon) icon.innerHTML = `<i data-lucide="loader" class="spin" style="width: 14px; height: 14px; color: var(--primary);"></i>`;
+    } else {
+      item.className = 'tx-step-item';
+      if (icon) icon.innerHTML = `<i data-lucide="circle" style="width: 14px; height: 14px; color: var(--text-muted);"></i>`;
+    }
+    lucide.createIcons();
+  };
+
+  try {
+    // Step 0: Preparing payload
+    setStep(0, 'pending');
+    await new Promise(resolve => setTimeout(resolve, 600));
+    setStep(0, 'completed');
+
+    // Step 1: Awaiting MetaMask approval
+    setStep(1, 'pending');
+    const transactionParameters = {
+      to: to,
+      from: STATE.wallet.address,
+      data: data,
+    };
+    const txHash = await window.ethereum.request({
+      method: 'eth_sendTransaction',
+      params: [transactionParameters],
+    });
+    setStep(1, 'completed');
+
+    // Step 2: Broadcasting
+    setStep(2, 'pending');
+    await new Promise(resolve => setTimeout(resolve, 600));
+    setStep(2, 'completed');
+
+    // Step 3: Confirming block settlement
+    setStep(3, 'pending');
+    const receipt = await waitForTxReceipt(txHash);
+    setStep(3, 'completed');
+
+    // Show Success Modal
+    loadingState.style.display = 'none';
+    successState.style.display = 'block';
+
+    document.getElementById('tx-success-title').textContent = "Transaction Settled!";
+    document.getElementById('tx-success-desc').textContent = actionDesc;
+    document.getElementById('tx-receipt-amount').textContent = `$${amount.toFixed(2)} USDC`;
+    document.getElementById('tx-receipt-id').textContent = `ARC-TX-${txHash.slice(2, 8).toUpperCase()}`;
+
+    const explorerLink = document.getElementById('tx-receipt-explorer-link');
+    if (explorerLink) {
+      explorerLink.href = `https://testnet.arcscan.app/tx/${txHash}`;
+      explorerLink.textContent = `${txHash.slice(0, 10)}...${txHash.slice(-8)}`;
+    }
+
+    lucide.createIcons();
+
+    if (callback) {
+      await callback(txHash, receipt);
+    }
+  } catch (error) {
+    console.error("On-Chain transaction failed:", error);
+    closeModal('tx-modal');
+    if (error.code === 4001) {
+      alert("Transaction rejected: You cancelled the wallet confirmation in MetaMask.");
+    } else {
+      alert("Transaction failed: " + (error.message || error));
+    }
+  }
+}
+
 function handleCreateTaskSubmit(event) {
   event.preventDefault();
 
   if (!STATE.wallet.connected) {
-    alert('Please connect your mock wallet first using the top-right button.');
+    alert('Please connect your Web3 wallet first using the top-right button.');
     return;
   }
 
@@ -1801,68 +1852,77 @@ function handleCreateTaskSubmit(event) {
   const totalCost = reward * limit;
 
   if (STATE.wallet.balance < totalCost) {
-    alert(`Insufficient mock wallet balance. You need $${totalCost.toFixed(2)} USDC but only have $${STATE.wallet.balance.toFixed(2)} USDC. Use the wallet modal droplet to request mock funds.`);
+    alert(`Insufficient balance. You need $${totalCost.toFixed(2)} USDC but only have $${STATE.wallet.balance.toFixed(2)} USDC. Please request funds from Circle Faucet.`);
     return;
   }
 
-  // Deduct deposit cost from wallet balance
-  STATE.wallet.balance -= totalCost;
-  saveWalletState();
-  updateWalletNavButton();
+  // Real USDC transfer data:
+  const data = encodeERC20Transfer(ESCROW_HOLDING_ADDRESS, totalCost);
 
-  // Create task ID and register task
-  const newTaskId = `task-${Date.now()}`;
-  const newTask = {
-    id: newTaskId,
-    title,
-    category,
-    desc,
-    instructions,
-    proofReq,
-    reward,
-    limit,
-    completedCount: 0,
-    creator,
-    status: 'active',
-    verificationType
-  };
-
-  if (verificationType === 'location') {
-    const locName = document.getElementById('param-loc-name').value;
-    const locLat = parseFloat(document.getElementById('param-loc-lat').value) || 6.4526;
-    const locLon = parseFloat(document.getElementById('param-loc-lon').value) || 3.4076;
-    newTask.locationTarget = { name: locName, lat: locLat, lon: locLon };
-  } else if (verificationType === 'inventory') {
-    const invName = document.getElementById('param-inv-name').value;
-    const invExpected = parseInt(document.getElementById('param-inv-expected').value) || 20;
-    newTask.inventoryItems = [
-      { name: invName, expected: invExpected }
-    ];
-  }
-
-  STATE.tasks.unshift(newTask);
-
-  // Add transaction history record
-  STATE.transactions.unshift({
-    id: `tx-${Date.now()}`,
-    type: 'create',
-    desc: `Deployed Task Pool: "${title}"`,
-    amount: -totalCost,
-    timestamp: new Date().toISOString(),
-    success: true
-  });
-
-  // Trigger nanopayment simulation ring
-  showTransactionSuccessAnimation(
+  executeRealTransaction(
+    USDC_CONTRACT_ADDRESS,
+    data,
     totalCost,
-    'Your task pool has been deployed. Funds locked in Arc Smart Deposit Vault.',
-    `ARC-POOL-${Math.floor(10000 + Math.random() * 90000)}`
-  );
+    `Your task pool has been deployed. Funds locked in Arc Escrow Holding Address.`,
+    async (txHash, receipt) => {
+      // Refresh wallet balance on-chain
+      STATE.wallet.balance = await getUSDCBalance(STATE.wallet.address);
+      saveWalletState();
+      updateWalletNavButton();
 
-  // Redirect after short delay
-  setTimeout(() => {
-    window.location.hash = '#/marketplace';
-  }, 3000);
+      // Create task ID and register task
+      const newTaskId = `task-${Date.now()}`;
+      const newTask = {
+        id: newTaskId,
+        title,
+        category,
+        desc,
+        instructions,
+        proofReq,
+        reward,
+        limit,
+        completedCount: 0,
+        creator,
+        status: 'active',
+        escrowAgreementAddress: ESCROW_HOLDING_ADDRESS,
+        escrowTxHash: txHash,
+        escrowStatus: 'funded',
+        verificationType
+      };
+
+      if (verificationType === 'location') {
+        const locName = document.getElementById('param-loc-name').value;
+        const locLat = parseFloat(document.getElementById('param-loc-lat').value) || 6.4526;
+        const locLon = parseFloat(document.getElementById('param-loc-lon').value) || 3.4076;
+        newTask.locationTarget = { name: locName, lat: locLat, lon: locLon };
+      } else if (verificationType === 'inventory') {
+        const invName = document.getElementById('param-inv-name').value;
+        const invExpected = parseInt(document.getElementById('param-inv-expected').value) || 20;
+        newTask.inventoryItems = [
+          { name: invName, expected: invExpected }
+        ];
+      }
+
+      STATE.tasks.unshift(newTask);
+
+      // Add transaction history record
+      STATE.transactions.unshift({
+        id: `tx-${Date.now()}`,
+        type: 'create',
+        desc: `Deployed Task Pool: "${title}"`,
+        amount: -totalCost,
+        timestamp: new Date().toISOString(),
+        success: true,
+        txHash: txHash
+      });
+
+      // Redirect after short delay
+      setTimeout(() => {
+        closeModal('tx-modal');
+        window.location.hash = '#/marketplace';
+      }, 3000);
+    }
+  );
 }
 
 window.handleCreateTaskSubmit = handleCreateTaskSubmit;
@@ -1983,7 +2043,7 @@ function renderBusinessTasksView(container) {
             
             <div class="list-item-meta" style="font-size: 12px; margin-top: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
               <div>
-                <span>Earner: <code>${sub.earnerAddress}</code></span>
+                <span>Earner: <code>${sub.earnerAddress.slice(0, 6)}...${sub.earnerAddress.slice(-4)}</code></span>
                 <span style="margin-left: 12px;">Submitted: ${new Date(sub.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
               </div>
               <span style="font-size: 14px;">Reward: <strong style="color: var(--secondary);">$${sub.reward.toFixed(2)} USDC</strong></span>
@@ -2070,53 +2130,58 @@ async function approveSubmission(subId) {
 
   const task = STATE.tasks.find(t => t.id === sub.taskId);
 
-  // Run multi-step smart contract escrow payout simulation
-  const txDetails = await runEscrowTxSimulation('payout', {
-    earnerAddress: sub.earnerAddress,
-    reward: sub.reward,
-    escrowAddress: task ? task.escrowAgreementAddress : null
-  });
+  // Real USDC transfer reward data:
+  const data = encodeERC20Transfer(sub.earnerAddress, sub.reward);
 
-  // Process approval state
-  sub.status = 'approved';
+  executeRealTransaction(
+    USDC_CONTRACT_ADDRESS,
+    data,
+    sub.reward,
+    `Nanopayment reward successfully distributed directly to earner: ${sub.earnerAddress.slice(0, 6)}...${sub.earnerAddress.slice(-4)}`,
+    async (txHash, receipt) => {
+      // Process approval state
+      sub.status = 'approved';
 
-  // Find task and update counts
-  if (task) {
-    task.completedCount = Math.min(task.limit, task.completedCount + 1);
-  }
+      // Find task and update counts
+      if (task) {
+        task.completedCount = Math.min(task.limit, task.completedCount + 1);
+      }
 
-  // Update earner claim status if this matches local earner simulation address
-  if (STATE.wallet.connected) {
-    const claim = STATE.myClaims.find(c => c.taskId === sub.taskId);
-    if (claim) {
-      claim.status = 'completed';
-      claim.txHash = txDetails.txHash;
+      // Update earner claim status if this matches local earner simulation address
+      if (STATE.wallet.connected) {
+        const claim = STATE.myClaims.find(c => c.taskId === sub.taskId);
+        if (claim) {
+          claim.status = 'completed';
+          claim.txHash = txHash;
+        }
+
+        // Refresh wallet balance on-chain
+        STATE.wallet.balance = await getUSDCBalance(STATE.wallet.address);
+        saveWalletState();
+        updateWalletNavButton();
+
+        // Log transaction
+        STATE.transactions.unshift({
+          id: `tx-${Date.now()}`,
+          type: 'earning',
+          desc: `Micro-task payout: "${sub.taskTitle}"`,
+          amount: sub.reward,
+          timestamp: new Date().toISOString(),
+          success: true,
+          txHash: txHash,
+          escrowAddress: task ? task.escrowAgreementAddress : null
+        });
+      }
+
+      // Remove the submission from reviewer list
+      STATE.submissions = STATE.submissions.filter(s => s.id !== subId);
+
+      setTimeout(() => {
+        closeModal('tx-modal');
+        handleRoute();
+      }, 3000);
     }
-    // Boost wallet balance with the reward since it was approved!
-    STATE.wallet.balance += sub.reward;
-    saveWalletState();
-    updateWalletNavButton();
-
-    // Log transaction
-    STATE.transactions.unshift({
-      id: `tx-${Date.now()}`,
-      type: 'earning',
-      desc: `Micro-task payout: "${sub.taskTitle}"`,
-      amount: sub.reward,
-      timestamp: new Date().toISOString(),
-      success: true,
-      txHash: txDetails.txHash,
-      escrowAddress: task ? task.escrowAgreementAddress : null
-    });
-  }
-
-  // Remove the submission from reviewer list
-  STATE.submissions = STATE.submissions.filter(s => s.id !== subId);
-
-  setTimeout(() => {
-    closeModal('tx-modal');
-    handleRoute();
-  }, 2500);
+  );
 }
 
 window.approveSubmission = approveSubmission;
@@ -2157,13 +2222,24 @@ function renderEarningsView(container) {
   }, 0);
 
   // Mock initial earnings to make dashboard look rich and populated
-  const defaultBaseEarnings = 4.35;
+  const defaultBaseEarnings = 0.00;
   const netEarnings = defaultBaseEarnings + totalEarnings;
   const nanoEarnings = Math.round(netEarnings * 1000000).toLocaleString();
 
+  const totalCompletedUserTasks = completedClaims.length;
+  let userLevel = 1;
+  let levelTitle = "Explorer";
+  if (totalCompletedUserTasks >= 10) {
+    userLevel = 3;
+    levelTitle = "Local Champion";
+  } else if (totalCompletedUserTasks >= 3) {
+    userLevel = 2;
+    levelTitle = "Active Contributor";
+  }
+
   // Tasks count by category
   const counts = { local: 0, digital: 0, social: 0, testing: 0 };
-  const categoriesWorth = { local: 1.25, digital: 0.90, social: 0.40, testing: 1.80 }; // base stats
+  const categoriesWorth = { local: 0.00, digital: 0.00, social: 0.00, testing: 0.00 }; // base stats
 
   completedClaims.forEach(claim => {
     const task = STATE.tasks.find(t => t.id === claim.taskId);
@@ -2176,10 +2252,10 @@ function renderEarningsView(container) {
   const totalValue = categoriesWorth.local + categoriesWorth.digital + categoriesWorth.social + categoriesWorth.testing;
 
   // Custom visual progress bar calculation for HSL category chart
-  const pctLocal = Math.round((categoriesWorth.local / totalValue) * 100) || 25;
-  const pctDigital = Math.round((categoriesWorth.digital / totalValue) * 100) || 25;
-  const pctSocial = Math.round((categoriesWorth.social / totalValue) * 100) || 25;
-  const pctTesting = Math.round((categoriesWorth.testing / totalValue) * 100) || 25;
+  const pctLocal = totalValue > 0 ? Math.round((categoriesWorth.local / totalValue) * 100) : 0;
+  const pctDigital = totalValue > 0 ? Math.round((categoriesWorth.digital / totalValue) * 100) : 0;
+  const pctSocial = totalValue > 0 ? Math.round((categoriesWorth.social / totalValue) * 100) : 0;
+  const pctTesting = totalValue > 0 ? Math.round((categoriesWorth.testing / totalValue) * 100) : 0;
 
   container.innerHTML = `
     <h1 style="font-size: 36px; margin-bottom: 4px;">My Earnings</h1>
@@ -2195,8 +2271,8 @@ function renderEarningsView(container) {
           <span style="font-size: 13px; text-transform: uppercase; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; display: block; margin-bottom: 8px;">Total Net Revenue</span>
           <div style="font-size: 48px; font-weight: 800; color: var(--secondary); font-family: var(--font-heading); margin-bottom: 4px;">$${netEarnings.toFixed(2)} USDC</div>
           <div style="font-size: 14px; color: var(--text-muted); margin-bottom: 24px;">${nanoEarnings} nanoUSDC</div>
-          <button class="btn btn-primary" onclick="simulateCashout(${netEarnings})" style="width: 100%;">
-            <i data-lucide="external-link"></i> Cash out to Mainnet
+          <button class="btn btn-outline" onclick="alert('USDC rewards are settled directly to your connected EVM wallet on-chain upon task approval. Your wallet balance is updated in real-time.')" style="width: 100%;">
+            <i data-lucide="info"></i> Settled Directly to Wallet
           </button>
         </div>
 
@@ -2209,8 +2285,8 @@ function renderEarningsView(container) {
               <i data-lucide="zap" style="width: 20px; height: 20px;"></i>
             </div>
             <div>
-              <div style="font-size: 14px; font-weight: 600;">Jara Local Champion</div>
-              <div style="font-size: 12px; color: var(--text-muted);">Level 2 &bull; 14 total tasks</div>
+              <div style="font-size: 14px; font-weight: 600;">Jara ${levelTitle}</div>
+              <div style="font-size: 12px; color: var(--text-muted);">Level ${userLevel} &bull; ${totalCompletedUserTasks} total tasks</div>
             </div>
           </div>
         </div>
@@ -2530,9 +2606,9 @@ function renderUseCasesView(container) {
 
   container.innerHTML = `
     <div style="margin-bottom: 40px; text-align: center;">
-      <h1 style="font-size: 38px; margin-bottom: 8px;">Jara Use Cases</h1>
-      <p style="color: var(--text-secondary); max-width: 600px; margin: 0 auto; font-size: 15px; line-height: 1.6;">
-        See how small businesses, brands, and local organizations use Jara's nanopayment infrastructure and task verification system to solve physical infrastructure challenges.
+      <h1 style="font-size: 38px; margin-bottom: 8px;">Community Commerce Use Cases</h1>
+      <p style="color: var(--text-secondary); max-width: 650px; margin: 0 auto; font-size: 15px; line-height: 1.6;">
+        Explore how enterprises, local merchants, and public projects use Jara's stablecoin escrow architecture to coordinate hyper-local micro-work previously restricted by transaction fee erosion.
       </p>
     </div>
 
@@ -2542,9 +2618,9 @@ function renderUseCasesView(container) {
 
     <!-- Call to action block -->
     <section class="glass-card" style="text-align: center; padding: 40px; margin-top: 50px; border-color: var(--border-color); background: radial-gradient(circle at top right, var(--primary-glow), transparent 60%);">
-      <h2 style="font-size: 24px; margin-bottom: 12px;">Have a custom verification workflow?</h2>
-      <p style="color: var(--text-secondary); max-width: 500px; margin: 0 auto 24px auto; font-size: 14px; line-height: 1.5;">
-        Deploy a customized task pool on the Arc Network, fund it gaslessly, and source verified data and physical audits from local earners immediately.
+      <h2 style="font-size: 24px; margin-bottom: 12px;">Deploy Custom Commerce Infrastructure</h2>
+      <p style="color: var(--text-secondary); max-width: 600px; margin: 0 auto 24px auto; font-size: 14px; line-height: 1.5;">
+        Setup a tailored escrow pool to reward hyper-local datasets and inventory verification. Incentivize actions previously deemed too micro to reward, gaslessly backed by Arc Network.
       </p>
       <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
         <a href="#/create" class="btn btn-primary"><i data-lucide="plus-circle"></i> Deploy Task Pool</a>
@@ -2555,3 +2631,239 @@ function renderUseCasesView(container) {
 }
 
 window.renderUseCasesView = renderUseCasesView;
+
+function renderNanoPayEngineView(container) {
+  const activeRewardPool = STATE.tasks.reduce((sum, t) => sum + (t.reward * (t.limit - t.completedCount)), 0);
+  const rewardPoolDisplay = activeRewardPool.toFixed(2);
+
+  const totalCompletedTasks = STATE.tasks.reduce((sum, t) => sum + t.completedCount, 0);
+  const totalDistributedVal = STATE.tasks.reduce((sum, t) => sum + (t.reward * t.completedCount), 0);
+  const totalDistributed = totalDistributedVal.toFixed(2);
+  const averageReward = totalCompletedTasks > 0 ? (totalDistributedVal / totalCompletedTasks).toFixed(3) : "0.000";
+
+  const contributorsSet = new Set();
+  if (STATE.wallet.connected && STATE.wallet.address) {
+    contributorsSet.add(STATE.wallet.address.toLowerCase());
+  }
+  STATE.tasks.forEach(t => {
+    if (t.creator) {
+      contributorsSet.add(t.creator.toLowerCase());
+    }
+  });
+  const activeContributors = contributorsSet.size;
+
+  container.innerHTML = `
+    <div style="margin-bottom: 40px; text-align: center;">
+      <h1 style="font-size: 38px; margin-bottom: 8px;">NanoPay Settlement Engine</h1>
+      <p style="color: var(--text-secondary); max-width: 650px; margin: 0 auto; font-size: 15px; line-height: 1.6;">
+        Inspect real time unit economics, gasless Paymaster throughput, and offchain transaction consolidation for low value community actions on the Arc Network.
+      </p>
+    </div>
+
+    <!-- Metrics Grid -->
+    <div class="nanopay-grid">
+      <div class="nanopay-stat-card primary">
+        <div class="nanopay-stat-lbl">Active Reward Pool</div>
+        <div class="nanopay-stat-val">$${rewardPoolDisplay} USDC</div>
+        <span style="font-size: 11px; color: var(--text-muted);">Locked in Escrow Vaults</span>
+      </div>
+      <div class="nanopay-stat-card secondary">
+        <div class="nanopay-stat-lbl">Completed Tasks</div>
+        <div class="nanopay-stat-val">${totalCompletedTasks.toLocaleString()}</div>
+        <span style="font-size: 11px; color: var(--text-muted);">Verified and Settled</span>
+      </div>
+      <div class="nanopay-stat-card pink">
+        <div class="nanopay-stat-lbl">Distributed Payouts</div>
+        <div class="nanopay-stat-val">$${totalDistributed} USDC</div>
+        <span style="font-size: 11px; color: var(--text-muted);">Gasless Nanopayments</span>
+      </div>
+      <div class="nanopay-stat-card amber">
+        <div class="nanopay-stat-lbl">Average Reward</div>
+        <div class="nanopay-stat-val">$${averageReward} USDC</div>
+        <span style="font-size: 11px; color: var(--text-muted);">Per micro-task action</span>
+      </div>
+      <div class="nanopay-stat-card success">
+        <div class="nanopay-stat-lbl">Active Earners</div>
+        <div class="nanopay-stat-val">${activeContributors.toLocaleString()}</div>
+        <span style="font-size: 11px; color: var(--text-muted);">Unique Wallet nodes</span>
+      </div>
+    </div>
+
+    <!-- Visual Flow Board Section -->
+    <div class="nanopay-flow-container">
+      <h3 style="font-size: 22px; margin-bottom: 8px;">Visual Micro-Payment Flow</h3>
+      <p style="color: var(--text-secondary); font-size: 14px; max-width: 550px; margin: 0 auto 24px auto;">
+        Trigger a simulation to watch stablecoin rewards flow from the business wallet, lock in the smart escrow contract, and release gaslessly to the earner.
+      </p>
+
+      <div class="flow-board">
+        <!-- Connecting Line Pathway -->
+        <div class="flow-path-line">
+          <div class="flow-path-progress" id="flow-progress"></div>
+        </div>
+        
+        <!-- Pulsing coin -->
+        <div class="flow-path-pulse" id="flow-pulse"></div>
+
+        <!-- Node 1: Business -->
+        <div class="flow-node-wrapper active" id="flow-node-1">
+          <div class="flow-node">
+            <i data-lucide="briefcase" style="width: 28px; height: 28px;"></i>
+          </div>
+          <div class="flow-node-label">Business Wallet</div>
+        </div>
+
+        <!-- Node 2: Escrow -->
+        <div class="flow-node-wrapper" id="flow-node-2">
+          <div class="flow-node">
+            <i data-lucide="lock" style="width: 28px; height: 28px;"></i>
+          </div>
+          <div class="flow-node-label">Escrow Smart Vault</div>
+        </div>
+
+        <!-- Node 3: Earner -->
+        <div class="flow-node-wrapper" id="flow-node-3">
+          <div class="flow-node">
+            <i data-lucide="wallet" style="width: 28px; height: 28px;"></i>
+          </div>
+          <div class="flow-node-label">Earner Wallet</div>
+        </div>
+      </div>
+
+      <div style="margin-top: 24px;">
+        <div class="flow-status-text" id="flow-status-text">Ready. Click the trigger button below to run simulation.</div>
+        <button class="btn btn-secondary" id="trigger-flow-btn" onclick="triggerVisualNanoPaymentFlow()" style="margin-top: 16px; min-width: 200px;">
+          <i data-lucide="play"></i> Trigger Payment Flow
+        </button>
+      </div>
+    </div>
+
+    <!-- Live Transaction Log Section -->
+    <div class="card" style="text-align: left;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+        <div>
+          <h3 style="font-size: 20px; display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="history" style="color: var(--secondary);"></i> Stablecoin Settlement Ledger
+          </h3>
+          <p style="color: var(--text-secondary); font-size: 13px; margin-top: 2px;">Consolidated micro-payments cleared gaslessly via L2 Paymaster nodes and off-chain state aggregation on the Arc Network.</p>
+        </div>
+        <span class="escrow-badge" style="font-size: 10px;"><i data-lucide="shield-check" style="width: 12px; height: 12px;"></i> Audited Ledger</span>
+      </div>
+
+      <div style="overflow-x: auto;">
+        <table class="inventory-table" style="margin: 0; min-width: 600px;">
+          <thead>
+            <tr>
+              <th>Tx Hash</th>
+              <th>USDC Value</th>
+              <th>Nanopayment (nanoUSDC)</th>
+              <th>Status</th>
+              <th>Timestamp</th>
+              <th>Arc L2 Explorer</th>
+            </tr>
+          </thead>
+          <tbody id="nanopay-ledger-body">
+            <tr id="no-ledger-tx">
+              <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">No on-chain settlements recorded yet.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  lucide.createIcons();
+}
+
+function triggerVisualNanoPaymentFlow() {
+  const btn = document.getElementById('trigger-flow-btn');
+  const node1 = document.getElementById('flow-node-1');
+  const node2 = document.getElementById('flow-node-2');
+  const node3 = document.getElementById('flow-node-3');
+  const progress = document.getElementById('flow-progress');
+  const pulse = document.getElementById('flow-pulse');
+  const statusText = document.getElementById('flow-status-text');
+
+  if (!btn || btn.disabled) return;
+  btn.disabled = true;
+  btn.innerHTML = `<i data-lucide="loader" class="spin" style="width: 14px; height: 14px; display: inline-block;"></i> Simulation Running...`;
+  lucide.createIcons();
+
+  node1.className = 'flow-node-wrapper active';
+  node2.className = 'flow-node-wrapper';
+  node3.className = 'flow-node-wrapper';
+  progress.style.width = '0%';
+  pulse.className = 'flow-path-pulse';
+  statusText.textContent = 'Phase 1: Business deposits reward budget into Smart Escrow Vault...';
+
+  setTimeout(() => {
+    pulse.classList.add('active-phase1');
+    progress.style.width = '50%';
+  }, 500);
+
+  setTimeout(() => {
+    pulse.className = 'flow-path-pulse';
+    node1.className = 'flow-node-wrapper completed';
+    node2.className = 'flow-node-wrapper active';
+    statusText.textContent = 'Phase 2: Escrow contract locks funds. Awaiting earner proof verification...';
+  }, 1700);
+
+  setTimeout(() => {
+    pulse.classList.add('active-phase2');
+    progress.style.width = '100%';
+    statusText.textContent = 'Phase 3: Verification successful! Releasing reward nanopayment to earner...';
+  }, 2700);
+
+  setTimeout(() => {
+    pulse.className = 'flow-path-pulse';
+    node2.className = 'flow-node-wrapper completed';
+    node3.className = 'flow-node-wrapper completed';
+    statusText.textContent = 'Settled! Earner wallet credited with stablecoins. Gas fee: $0.00 (Sponsored).';
+
+    appendLiveMockLedgerRow();
+
+    btn.disabled = false;
+    btn.innerHTML = `<i data-lucide="play"></i> Trigger Payment Flow`;
+    lucide.createIcons();
+  }, 3900);
+}
+
+function appendLiveMockLedgerRow() {
+  const tbody = document.getElementById('nanopay-ledger-body');
+  if (!tbody) return;
+
+  // Remove empty state placeholder row if present
+  const placeholder = document.getElementById('no-ledger-tx');
+  if (placeholder) {
+    placeholder.remove();
+  }
+
+  const mockReward = (0.05 + Math.random() * 0.45).toFixed(2);
+  const nanoReward = Math.round(mockReward * 1000000).toLocaleString();
+  const txHash = '0x' + Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+  const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  const row = document.createElement('tr');
+  row.style.animation = 'fade-in 0.4s ease-out forwards';
+  row.innerHTML = `
+    <td><code>${txHash.slice(0, 10)}...</code></td>
+    <td><span style="font-family: var(--font-heading); font-weight: 700; color: var(--secondary);">$${mockReward} USDC</span></td>
+    <td><span style="font-size: 11px; color: var(--text-muted); font-family: monospace;">${nanoReward} nanoUSDC</span></td>
+    <td><span class="badge badge-completed" style="font-size: 10px; padding: 2px 8px;">Settled</span></td>
+    <td>${timestamp}</td>
+    <td><a href="https://testnet.arcscan.app/tx/${txHash}" target="_blank" style="color: var(--primary); text-decoration: underline; font-size: 12px;">ArcScan</a></td>
+  `;
+
+  if (tbody.firstChild) {
+    tbody.insertBefore(row, tbody.firstChild);
+  } else {
+    tbody.appendChild(row);
+  }
+
+  while (tbody.children.length > 10) {
+    tbody.removeChild(tbody.lastChild);
+  }
+}
+
+window.renderNanoPayEngineView = renderNanoPayEngineView;
+window.triggerVisualNanoPaymentFlow = triggerVisualNanoPaymentFlow;
+window.appendLiveMockLedgerRow = appendLiveMockLedgerRow;

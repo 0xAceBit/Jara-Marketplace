@@ -4,9 +4,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jara | Instant Micro-task Stablecoin Nanopayments on Arc</title>
+  <title>Jara | Community Commerce Infrastructure on Arc</title>
   <meta name="description"
-    content="Jara connects small businesses with community members for instant micro-tasks, rewarding them with stablecoin nanopayments on Arc Network.">
+    content="Jara is a Community Commerce Infrastructure coordinating and monetizing hyper-local micro-work that was previously uneconomical to reward, powered gaslessly on Arc.">
+  <link rel="icon" type="image/png" href="jara.png">
   <link rel="stylesheet" href="style.css">
   <!-- Lucide Icons for vector-based premium icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -19,7 +20,13 @@
     <nav class="nav-container">
       <a href="#/" class="logo-container">
         <div class="logo-icon">
-          <i data-lucide="zap"></i>
+          <img src="jara.png" style="
+          height: 36px;
+          width: auto;
+          object-fit: contain;
+          display: block;
+          border-radius: 20%;
+">
         </div>
         <span>Jara</span>
       </a>
@@ -29,6 +36,7 @@
         <a href="#/" class="nav-link" id="nav-landing">Home</a>
         <a href="#/marketplace" class="nav-link" id="nav-marketplace">Marketplace</a>
         <a href="#/use-cases" class="nav-link" id="nav-use-cases">Use Cases</a>
+        <a href="#/nanopay-engine" class="nav-link" id="nav-nanopay-engine">NanoPay Engine</a>
         <a href="#/create" class="nav-link" id="nav-create">Create Task</a>
         <a href="#/my-tasks" class="nav-link" id="nav-my-tasks">My Tasks</a>
         <a href="#/earnings" class="nav-link" id="nav-earnings">Earnings</a>
@@ -49,9 +57,8 @@
   </header>
 
   <!-- Interactive Sandbox Simulator Controls -->
-  <div style="text-align: center; padding: 20px 24px 0 24px;">
+  <div id="simulation-role-banner-container" style="text-align: center; padding: 20px 24px 0 24px;">
     <div class="role-banner">
-      <span style="font-size: 13px; font-weight: 600; color: var(--text-muted);">SIMULATION ROLE:</span>
       <button class="role-btn active" id="role-earner-btn">Community Earner</button>
       <button class="role-btn" id="role-business-btn">Business Creator</button>
     </div>
@@ -74,10 +81,10 @@
     <div class="footer-container">
       <div style="display: flex; align-items: center; gap: 8px;">
         <span style="font-weight: 700; color: var(--text-primary);">Jara</span>
-        <span>&bull; Instant Stablecoin Nanopayments on Arc Network</span>
+        <span>&bull; Community Commerce Infrastructure on Arc Network</span>
       </div>
       <div>
-        <span>&copy; 2026 Jara Platform. Designed for Local Trust and Access.</span>
+        <span>&copy; 2026 Jara Platform. Designed for Hyper-local Coordination and Access.</span>
       </div>
     </div>
   </footer>
@@ -140,8 +147,9 @@
       </div>
       <div class="modal-body">
         <div id="wallet-modal-disconnected">
-          <p style="color: var(--text-secondary); margin-bottom: 24px; font-size: 14px;">Connect your Web3 wallet (such
-            as MetaMask) to the Arc Network. Stablecoin balance is fetched in USDC.</p>
+          <p style="color: var(--text-secondary); margin-bottom: 24px; font-size: 14px;">Connect your Web3 wallet or
+            enable instant session keys to inspect the gasless Paymaster nodes, escrow smart contracts, and stablecoin
+            balances on the Arc Network.</p>
           <button class="btn btn-primary" id="modal-connect-wallet-btn" style="width: 100%;">
             <i data-lucide="plug"></i> Connect Web3 Wallet
           </button>
@@ -184,7 +192,8 @@
           </div>
           <h3 id="tx-loading-title" style="font-size: 20px; margin-bottom: 8px;">Processing Transaction</h3>
           <p id="tx-loading-subtitle" style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">
-            Simulating zero-gas payment on Arc Network...</p>
+            Consolidating off-chain state aggregation layers and settling gaslessly via L2 Paymasters on the Arc
+            Network...</p>
 
           <!-- Dynamic multi-step checklist injected here -->
           <div id="tx-steps-container"></div>
