@@ -19,8 +19,8 @@ const STATE = {
 };
 
 // --- CENTRALIZED TASK SYNC & PERSISTENCE (SUPABASE) ---
-const SUPABASE_URL = 'YOUR_SUPABASE_URL'; // Replace with your Supabase project URL
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // Replace with your Supabase anon key
+const SUPABASE_URL = 'https://albuxdhwxospxvcyztwk.supabase.co'; // Replace with your Supabase project URL
+const SUPABASE_ANON_KEY = 'sb_publishable_UxaaYaT-uzLZ9VhNq9A6UQ_5gteid1x'; // Replace with your Supabase anon key
 
 let supabaseClient = null;
 if (typeof supabase !== 'undefined' && SUPABASE_URL !== 'YOUR_SUPABASE_URL' && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY') {
