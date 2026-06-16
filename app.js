@@ -18,62 +18,52 @@ const STATE = {
   transactions: []
 };
 
-// --- CENTRALIZED TASK SYNC & PERSISTENCE (SUPABASE) ---
-const SUPABASE_URL = 'https://albuxdhwxospxvcyztwk.supabase.co'; // Replace with your Supabase project URL
-const SUPABASE_ANON_KEY = 'sb_publishable_UxaaYaT-uzLZ9VhNq9A6UQ_5gteid1x'; // Replace with your Supabase anon key
+// --- CENTRALIZED TASK SYNC & PERSISTENCE (POCKETBASE) ---
+const pb = new PocketBase('http://127.0.0.1:8090');
 
-let supabaseClient = null;
-if (typeof supabase !== 'undefined' && SUPABASE_URL !== 'YOUR_SUPABASE_URL' && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY') {
-  try {
-    supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  } catch (err) {
-    console.error("Failed to initialize Supabase client:", err);
-  }
+function mapRecordToTask(r) {
+  return {
+    id: r.id,
+    title: r.title,
+    description: r.description,
+    instructions: r.instructions,
+    category: r.category,
+    reward: parseFloat(r.reward) || 0,
+    limit: parseInt(r.limit) || 0,
+    completedCount: parseInt(r.completedCount) || 0,
+    creator: r.creator,
+    status: r.status,
+    escrowAgreementAddress: r.escrowAgreementAddress,
+    escrowTxHash: r.escrowTxHash,
+    escrowStatus: r.escrowStatus,
+    verificationType: r.verificationType,
+    locationTarget: r.locationTarget,
+    inventoryItems: r.inventoryItems
+  };
 }
 
-async function fetchTasks() {
-  if (supabaseClient) {
-    try {
-      const { data, error } = await supabaseClient
-        .from('tasks')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (!error && data) return data;
-      console.warn("Supabase fetch failed, falling back to cache:", error);
-    } catch (e) {
-      console.warn("Supabase fetch exception, falling back to cache:", e);
+// Realtime task synchronization
+pb.collection('tasks').subscribe('*', (e) => {
+  console.log("Realtime event received:", e.action, e.record);
+  const task = mapRecordToTask(e.record);
+
+  if (e.action === 'create') {
+    const exists = STATE.tasks.some(t => t.id === task.id);
+    if (!exists) {
+      STATE.tasks.unshift(task);
     }
-  }
-  try {
-    const local = localStorage.getItem('jara-tasks');
-    if (local) return JSON.parse(local);
-  } catch (e) { }
-  return [];
-}
-
-async function saveTasks(tasks, taskToUpsert = null) {
-  try {
-    localStorage.setItem('jara-tasks', JSON.stringify(tasks));
-  } catch (e) { }
-
-  if (supabaseClient && taskToUpsert) {
-    try {
-      const { error } = await supabaseClient
-        .from('tasks')
-        .upsert(taskToUpsert);
-      if (error) console.warn("Supabase upsert failed:", error);
-    } catch (e) {
-      console.warn("Supabase upsert exception:", e);
+  } else if (e.action === 'update') {
+    const idx = STATE.tasks.findIndex(t => t.id === task.id);
+    if (idx !== -1) {
+      STATE.tasks[idx] = task;
     }
+  } else if (e.action === 'delete') {
+    STATE.tasks = STATE.tasks.filter(t => t.id !== task.id);
   }
-}
 
-async function syncTasksFromStorage() {
-  const remoteTasks = await fetchTasks();
-  if (remoteTasks && Array.isArray(remoteTasks)) {
-    STATE.tasks = remoteTasks;
-  }
-}
+  // Trigger re-render of active view
+  handleRoute();
+});
 
 // --- REAL TRANSACTION HELPERS ---
 const USDC_CONTRACT_ADDRESS = '0x3600000000000000000000000000000000000000';
@@ -121,8 +111,16 @@ document.addEventListener('DOMContentLoaded', () => {
   // Setup Metamask event listeners
   setupEthereumProviderListeners();
 
-  // Initial Route Load
-  syncTasksFromStorage().then(() => handleRoute());
+  // Initial Route Load & Task Fetch from PocketBase
+  pb.collection('tasks').getFullList({ sort: '-created' })
+    .then(records => {
+      STATE.tasks = records.map(mapRecordToTask);
+      handleRoute();
+    })
+    .catch(err => {
+      console.warn("Failed to fetch initial tasks from PocketBase:", err);
+      handleRoute();
+    });
 });
 
 // --- LIGHT/DARK THEME TOGGLE ---
@@ -175,22 +173,18 @@ function handleRoute() {
   if (hash === '#/') {
     document.getElementById('nav-landing')?.classList.add('active');
     renderLandingView(appRoot);
-    syncTasksFromStorage().then(() => renderLandingView(appRoot));
   } else if (hash === '#/marketplace') {
     document.getElementById('nav-marketplace')?.classList.add('active');
     renderMarketplaceView(appRoot);
-    syncTasksFromStorage().then(() => renderMarketplaceView(appRoot));
   } else if (hash === '#/create') {
     document.getElementById('nav-create')?.classList.add('active');
     renderCreateTaskView(appRoot);
   } else if (hash === '#/my-tasks') {
     document.getElementById('nav-my-tasks')?.classList.add('active');
     renderMyTasksView(appRoot);
-    syncTasksFromStorage().then(() => renderMyTasksView(appRoot));
   } else if (hash === '#/earnings') {
     document.getElementById('nav-earnings')?.classList.add('active');
     renderEarningsView(appRoot);
-    syncTasksFromStorage().then(() => renderEarningsView(appRoot));
   } else if (hash === '#/wallet') {
     document.getElementById('nav-wallet')?.classList.add('active');
     renderWalletView(appRoot);
@@ -200,7 +194,6 @@ function handleRoute() {
   } else if (hash === '#/nanopay-engine') {
     document.getElementById('nav-nanopay-engine')?.classList.add('active');
     renderNanoPayEngineView(appRoot);
-    syncTasksFromStorage().then(() => renderNanoPayEngineView(appRoot));
   } else {
     appRoot.innerHTML = `<div style="text-align: center; padding: 100px 0;"><h2>404 - View Not Found</h2><a href="#/" class="btn btn-primary" style="margin-top:20px;">Back Home</a></div>`;
   }
@@ -1054,7 +1047,7 @@ function renderLandingView(container) {
           Community Commerce Infrastructure Powered by <span style="background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Stablecoin Nanopayments</span>
         </h1>
         <p class="hero-desc" style="font-size: 16px; line-height: 1.6; margin-bottom: 32px; color: var(--text-secondary);">
-          Jara coordinates and monetizes hyper-local micro-work that was previously uneconomical to reward. Powered gaslessly on the Arc Network.
+          Jara coordinates and monetizes hyper local micro work that was previously uneconomical to reward. Powered gaslessly on the Arc Network.
         </p>
         <div class="hero-actions">
           <a href="#/marketplace" class="btn btn-primary">
@@ -1154,7 +1147,7 @@ function renderLandingView(container) {
     <section style="text-align: center; margin-bottom: 80px; padding: 40px 0;">
       <h2 style="font-size: 32px; margin-bottom: 12px;">How It Works</h2>
       <p style="color: var(--text-secondary); max-width: 550px; margin: 0 auto 52px auto; font-size: 15px;">
-        Jara coordinates micro-work via gasless Paymaster vaults, resolving micro-incentives through off-chain aggregation and instant L2 stablecoin settlement.
+        Jara coordinates micro work via gasless Paymaster vaults, resolving micro-incentives through off-chain aggregation and instant L2 stablecoin settlement.
       </p>
 
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px;">
@@ -1162,7 +1155,7 @@ function renderLandingView(container) {
           <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary-glow); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 20px; font-family: var(--font-heading);">1</div>
           <h3 style="font-size: 18px; margin-bottom: 10px;">Deploy Smart Vault Pool</h3>
           <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.5;">
-            Businesses define micro-work validation rules and lock stablecoin reward liquidity in a gasless Arc Escrow smart contract vault.
+            Businesses define micro work validation rules and lock stablecoin reward liquidity in a gasless Arc Escrow smart contract vault.
           </p>
         </div>
 
@@ -1170,7 +1163,7 @@ function renderLandingView(container) {
           <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--secondary-glow); color: var(--secondary); display: flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 20px; font-family: var(--font-heading);">2</div>
           <h3 style="font-size: 18px; margin-bottom: 10px;">Off-Chain Coordination</h3>
           <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.5;">
-            Earners locate hyper-local micro-work, execute physical or digital validation steps, and submit proof cryptographically via their mobile device.
+            Earners locate hyper local micro work, execute physical or digital validation steps, and submit proof cryptographically via their mobile device.
           </p>
         </div>
 
@@ -1189,7 +1182,7 @@ function renderLandingView(container) {
       <div style="text-align: center; margin-bottom: 48px;">
         <h2 style="font-size: 32px; margin-bottom: 12px;">Ecosystem Use Cases</h2>
         <p style="color: var(--text-secondary); max-width: 580px; margin: 0 auto; font-size: 15px;">
-          Coordinating high-fidelity physical audits, local index tracking, and localized micro-work that was previously uneconomical to reward.
+          Coordinating high-fidelity physical audits, local index tracking, and localized micro work that was previously uneconomical to reward.
         </p>
       </div>
 
@@ -1300,7 +1293,7 @@ function renderLandingView(container) {
       <h2 style="font-size: 36px; margin-bottom: 16px;">Ready to Coordinate Community Commerce?</h2>
       <p style="color: var(--text-secondary); max-width: 550px; margin: 0 auto 36px auto; font-size: 16px; line-height: 1.6;">
         ${STATE.role === 'earner'
-      ? 'Connect your wallet in seconds, authorize session keys, and start earning stablecoin nanopayments for micro-work.'
+      ? 'Connect your wallet in seconds, authorize session keys, and start earning stablecoin nanopayments for micro work.'
       : 'Deploy a gasless task pool, deposit stablecoin liquidity, and access on-demand local coordinates and verification.'}
       </p>
       <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
@@ -1923,8 +1916,9 @@ function handleCreateTaskSubmit(event) {
       saveWalletState();
       updateWalletNavButton();
 
-      // Create task ID and register task
-      const newTaskId = `task-${Date.now()}`;
+      // Create task ID and register task (PocketBase compatible 15-char alphanumeric)
+      const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+      const newTaskId = Array.from({ length: 15 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
       const newTask = {
         id: newTaskId,
         title,
@@ -1957,7 +1951,9 @@ function handleCreateTaskSubmit(event) {
       }
 
       STATE.tasks.unshift(newTask);
-      saveTasks(STATE.tasks, newTask);
+      pb.collection('tasks').create(newTask).catch(err => {
+        console.error("PocketBase task creation failed:", err);
+      });
 
       // Add transaction history record
       STATE.transactions.unshift({
@@ -2199,7 +2195,7 @@ async function approveSubmission(subId) {
       // Find task and update counts
       if (task) {
         task.completedCount = Math.min(task.limit, task.completedCount + 1);
-        await saveTasks(STATE.tasks, task);
+        await pb.collection('tasks').update(task.id, { completedCount: task.completedCount });
       }
 
       // Update earner claim status if this matches local earner simulation address
@@ -2542,146 +2538,6 @@ function renderWalletView(container) {
         </div>
       </div>
     </div>
-  `;
-}
-
-function renderUseCasesView(container) {
-  const useCases = [
-    {
-      title: "Market Price Verification",
-      icon: "shopping-cart",
-      iconColor: "purple",
-      desc: "Distributors and price monitoring agencies deploy tasks for local shoppers to visit Balogun, Mile 12, or local markets to confirm retail price indexes.",
-      verification: "Photo Proof + Text Entry",
-      impact: "Provides transparent, real-time market data to prevent predatory pricing and inflation spikes.",
-      reward: 0.35,
-      nanoReward: "350,000 nanoUSDC"
-    },
-    {
-      title: "Traffic Reporting",
-      icon: "activity",
-      iconColor: "teal",
-      desc: "Logistics companies collect live road hazard and congestion verification reports at major bottleneck corridors and bridge checkpoints.",
-      verification: "GPS Location Check-in",
-      impact: "Cuts commuter transit times and optimizes city supply chains by routing around live delays.",
-      reward: 0.15,
-      nanoReward: "150,000 nanoUSDC"
-    },
-    {
-      title: "Local Inventory Updates",
-      icon: "box",
-      iconColor: "pink",
-      desc: "Consumer brand distributors audit stock count levels and item expiry dates directly at regional warehouse outlets and retail depots.",
-      verification: "Inventory Count sheet",
-      impact: "Prevents product stockouts and minimizes storage overhead via crowd-sourced retail audits.",
-      reward: 0.50,
-      nanoReward: "500,000 nanoUSDC"
-    },
-    {
-      title: "Merchant Referrals",
-      icon: "user-plus",
-      iconColor: "amber",
-      desc: "Earners register neighboring kiosks, street food stalls, and corner shops to accept gasless USDC payments on the Arc Network.",
-      verification: "EVM Address verification",
-      impact: "Bridges informal neighborhood commerce with stable, high-velocity digital payment infrastructure.",
-      reward: 1.50,
-      nanoReward: "1,500,000 nanoUSDC"
-    },
-    {
-      title: "Last Mile Delivery",
-      icon: "truck",
-      iconColor: "purple",
-      desc: "Package delivery verification for residential structures and unmapped lanes where standard GPS tracking is inaccurate.",
-      verification: "Photo Proof + GPS verify",
-      impact: "Drastically lowers courier loss rates and coordinates deliveries to complex urban areas.",
-      reward: 0.75,
-      nanoReward: "750,000 nanoUSDC"
-    },
-    {
-      title: "Product Reviews",
-      icon: "star",
-      iconColor: "teal",
-      desc: "Consumer surveys validating retail satisfaction, product taste-testing, or packaging appeal directly from local buyers.",
-      verification: "Text Submission survey",
-      impact: "Provides high-fidelity, zero-bias consumer insights without expensive advertising agencies.",
-      reward: 0.20,
-      nanoReward: "200,000 nanoUSDC"
-    },
-    {
-      title: "Community Security Reports",
-      icon: "shield",
-      iconColor: "pink",
-      desc: "Reporting public safety hazards, faulty traffic signals, water leaks, or waste management build-ups in real-time.",
-      verification: "Photo Proof + GPS verify",
-      impact: "Aids municipal planning and local maintenance organizations to resolve critical urban issues faster.",
-      reward: 0.40,
-      nanoReward: "400,000 nanoUSDC"
-    },
-    {
-      title: "Local Data Collection",
-      icon: "file-text",
-      iconColor: "amber",
-      desc: "Conducting quick localized census surveys, polling, or offline business directory index collection.",
-      verification: "Text Submission survey",
-      impact: "Collects granular socioeconomic metrics in low-bandwidth regions to de-risk investment.",
-      reward: 0.60,
-      nanoReward: "600,000 nanoUSDC"
-    }
-  ];
-
-  let cardsHtml = useCases.map(item => `
-    <div class="use-case-card">
-      <div>
-        <div class="use-case-icon-wrapper ${item.iconColor}">
-          <i data-lucide="${item.icon}" style="width: 24px; height: 24px;"></i>
-        </div>
-        <h3 class="use-case-title">${item.title}</h3>
-        <p class="use-case-desc">${item.desc}</p>
-        
-        <div style="margin-bottom: 16px;">
-          <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 6px; text-transform: uppercase;">Verification Method:</span>
-          <span class="badge badge-active" style="font-size: 11px; padding: 4px 10px; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2); color: var(--primary);">${item.verification}</span>
-        </div>
-
-        <div class="use-case-impact-box ${item.iconColor}">
-          <span class="use-case-impact-label">Economic Impact</span>
-          <p class="use-case-impact-text">${item.impact}</p>
-        </div>
-      </div>
-      
-      <div class="use-case-rewards-bar">
-        <span class="use-case-reward-label">Example Reward:</span>
-        <div style="text-align: right;">
-          <span class="use-case-reward-val">$${item.reward.toFixed(2)} USDC</span>
-          <span class="use-case-reward-nano">${item.nanoReward}</span>
-        </div>
-      </div>
-    </div>
-  `).join('');
-
-  container.innerHTML = `
-    <div style="margin-bottom: 40px; text-align: center;">
-      <h1 style="font-size: 38px; margin-bottom: 8px;">Community Commerce Use Cases</h1>
-      <p style="color: var(--text-secondary); max-width: 650px; margin: 0 auto; font-size: 15px; line-height: 1.6;">
-        Explore how enterprises, local merchants, and public projects use Jara's stablecoin escrow architecture to coordinate hyper-local micro-work previously restricted by transaction fee erosion.
-      </p>
-    </div>
-
-    <div class="use-cases-grid">
-      ${cardsHtml}
-    </div>
-
-    <!-- Call to action block -->
-    <section class="glass-card" style="text-align: center; padding: 40px; margin-top: 50px; border-color: var(--border-color); background: radial-gradient(circle at top right, var(--primary-glow), transparent 60%);">
-      <h2 style="font-size: 24px; margin-bottom: 12px;">Deploy Custom Commerce Infrastructure</h2>
-      <p style="color: var(--text-secondary); max-width: 600px; margin: 0 auto 24px auto; font-size: 14px; line-height: 1.5;">
-        Setup a tailored escrow pool to reward hyper-local datasets and inventory verification. Incentivize actions previously deemed too micro to reward, gaslessly backed by Arc Network.
-      </p>
-      <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
-        <a href="#/create" class="btn btn-primary"><i data-lucide="plus-circle"></i> Deploy Task Pool</a>
-        <a href="#/marketplace" class="btn btn-outline"><i data-lucide="search"></i> Browse Active Tasks</a>
-      </div>
-    </section>
   `;
 }
 
