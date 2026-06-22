@@ -1,8 +1,8 @@
 # Jara: Community Commerce Infrastructure
 
-Jara is a decentralized **Community Commerce Infrastructure** powered by stablecoin nanopayments on the **Arc Network**. The platform coordinates and monetizes hyper-local micro-work—such as retail audits, price monitoring, and inventory tracking—which was previously uneconomical to reward due to high L1 transaction fees and coordination friction.
+Jara is a decentralized **Community Commerce Infrastructure** powered by stablecoin nanopayments on the **Arc Network**. The platform coordinates and monetizes hyper local micro work—such as retail audits, price monitoring, and inventory tracking—which was previously uneconomical to reward due to high L1 transaction fees and coordination friction.
 
-By utilizing gasless Paymaster vaults and off-chain state coordination on the Arc L2 network, Jara connects local businesses directly with community contributors, allowing payments of fraction-of-a-cent scale to settle instantly.
+By utilizing gasless Paymaster vaults and offchain state coordination on the Arc L2 network, Jara connects local businesses directly with community contributors, allowing payments of fraction-of-a-cent scale to settle instantly.
 
 ---
 
@@ -52,21 +52,21 @@ Jara provides physical and digital audit tracking widgets to guarantee high-fide
 - **Text Surveys**: Monospaced textbox logs for digital polls and feedback verification.
 
 ### 3. NanoPay Settlement Engine
-A real-time metrics dashboard displaying the macro-economics of the micro-work network:
+A real-time metrics dashboard displaying the macro-economics of the micro work network:
 - **Metrics Tracked**: Active reward pools, settled micro-tasks, total distributed payouts, average reward per action, and active earners.
 - **Visual Payment Flow**: An animated progress simulator showing stablecoins streaming from the Business Wallet, locking in the Escrow Smart Vault, and releasing to the Earner.
 - **Audited Ledger**: A transaction activity ledger that tracks every settlement hash, time, amount, and explorer link.
 
 ### 4. Dynamic Analytics & Earner Dashboard
 - **Earnings Summary**: Aggregated earn logs, showing total net revenues in both USD values and `nanoUSDC` (millionths of a dollar).
-- **Gamified Achievements**: A dynamically-scaling status indicator leveling up users from *Level 1 Explorer* to *Level 2 Active Contributor* and *Level 3 Local Champion* as they settle tasks.
+- **Gamified Achievements**: A dynamically scaling status indicator leveling up users from *Level 1 Explorer* to *Level 2 Active Contributor* and *Level 3 Local Champion* as they settle tasks.
 - **Visual Progress Stack**: Harmonious CSS-based HSL charts that show revenue proportions across local, digital, social, and app testing categories.
 
 ---
 
 ## Fork & Go: Reusable Primitives
 
-Jara exposes standalone, lightweight Web3 and validation primitives inside [arc-utils.js](file:///c:/Users/ACE/OneDrive/Desktop/Jara/lib/arc-utils.js) that you can drop into any vanilla L2 browser codebase.
+Jara exposes standalone, lightweight Web3 and validation primitives inside [arc-utils.js]that you can drop into any vanilla L2 browser codebase.
 
 ### 1. Gasless Stablecoin Transfer Encoder
 Encode a USDC transfer payload without importing heavy external libraries:

@@ -19,7 +19,7 @@ const STATE = {
 };
 
 // --- CENTRALIZED TASK SYNC & PERSISTENCE (POCKETBASE) ---
-const pb = new PocketBase('http://127.0.0.1:8090');
+const pb = new PocketBase('https://pocketbase-deployment-production.up.railway.app');
 
 function mapRecordToTask(r) {
   return {
@@ -96,12 +96,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load Saved Wallet if exists
   const savedWallet = localStorage.getItem('jara-wallet');
+  const savedMethod = localStorage.getItem('jara-wallet-method');
   if (savedWallet) {
     try {
       STATE.wallet = JSON.parse(savedWallet);
       updateWalletNavButton();
       // Verify active Web3 connection
-      checkRealWalletConnection();
+      if (savedMethod === 'walletconnect') {
+        initWalletConnect(false).then(() => {
+          checkRealWalletConnection();
+        }).catch(err => {
+          console.warn("WalletConnect auto-reconnect failed:", err);
+        });
+      } else {
+        checkRealWalletConnection();
+      }
     } catch (e) { }
   }
 
@@ -246,9 +255,19 @@ function setupEventListeners() {
     handleRoute(); // re-render current view with the new role perspective
   });
 
-  // Connect wallet button within wallet modal
-  document.getElementById('modal-connect-wallet-btn')?.addEventListener('click', () => {
-    connectRealWallet();
+  // Connect Injected Browser Wallet button
+  document.getElementById('modal-connect-injected-btn')?.addEventListener('click', () => {
+    connectRealWallet('injected');
+  });
+
+  // Connect WalletConnect button
+  document.getElementById('modal-connect-wc-btn')?.addEventListener('click', () => {
+    connectRealWallet('walletconnect');
+  });
+
+  // Connect MetaMask Mobile deep link button
+  document.getElementById('modal-connect-mm-mobile-btn')?.addEventListener('click', () => {
+    connectMetaMaskMobile();
   });
 
   // Disconnect wallet button within wallet modal
@@ -260,15 +279,91 @@ function setupEventListeners() {
   document.getElementById('wallet-modal-faucet-btn')?.addEventListener('click', () => {
     claimFaucetDrop();
   });
+
+  // Mobile navigation hamburger toggle button
+  document.getElementById('mobile-menu-toggle-btn')?.addEventListener('click', () => {
+    const navLinks = document.querySelector('.nav-links');
+    if (!navLinks) return;
+    navLinks.classList.toggle('open');
+    const toggleBtn = document.getElementById('mobile-menu-toggle-btn');
+    if (navLinks.classList.contains('open')) {
+      toggleBtn.innerHTML = '<i data-lucide="x"></i>';
+    } else {
+      toggleBtn.innerHTML = '<i data-lucide="menu"></i>';
+    }
+    lucide.createIcons();
+  });
+
+  // Auto-close menu drawer when navigation links are clicked
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.addEventListener('click', () => {
+      const navLinks = document.querySelector('.nav-links');
+      if (navLinks && navLinks.classList.contains('open')) {
+        navLinks.classList.remove('open');
+        const toggleBtn = document.getElementById('mobile-menu-toggle-btn');
+        if (toggleBtn) {
+          toggleBtn.innerHTML = '<i data-lucide="menu"></i>';
+        }
+        lucide.createIcons();
+      }
+    });
+  });
 }
 
 // --- REAL WALLET UTILITIES (ARC NETWORK) ---
-async function connectRealWallet() {
-  if (!window.ethereum) {
-    alert("Web3 wallet not detected. Please install MetaMask or another EVM wallet.");
-    return;
-  }
 
+// WalletConnect initialization
+async function initWalletConnect(showModal = false) {
+  try {
+    const projectId = localStorage.getItem('jara-wc-project-id') || 'c03d00cbd9783515e0be68f9a2e6f477';
+    console.log("Initializing WalletConnect with Project ID:", projectId);
+    
+    const provider = await window["@walletconnect/ethereum-provider"].EthereumProvider.init({
+      projectId: projectId,
+      chains: [5042002],
+      showQrModal: showModal,
+      rpcMap: {
+        5042002: 'https://rpc.testnet.arc.network'
+      },
+      metadata: {
+        name: 'Jara Marketplace',
+        description: 'Community Commerce Infrastructure on Arc',
+        url: window.location.origin,
+        icons: [window.location.origin + '/jara.png']
+      }
+    });
+
+    provider.on("accountsChanged", async (accounts) => {
+      console.log("WalletConnect accountsChanged:", accounts);
+      if (accounts.length > 0) {
+        await handleWalletConnected(accounts[0], 'walletconnect');
+      } else {
+        disconnectRealWallet();
+      }
+    });
+
+    provider.on("chainChanged", (chainId) => {
+      console.log("WalletConnect chainChanged:", chainId);
+      const hexChainId = typeof chainId === 'number' ? '0x' + chainId.toString(16) : chainId;
+      if (hexChainId !== '0x4cef52') {
+        switchNetwork(provider);
+      }
+    });
+
+    provider.on("disconnect", () => {
+      console.log("WalletConnect disconnected");
+      disconnectRealWallet();
+    });
+
+    window.activeProvider = provider;
+    return provider;
+  } catch (err) {
+    console.error("WalletConnect initialization error:", err);
+    throw err;
+  }
+}
+
+async function switchNetwork(provider) {
   const ARC_CHAIN_ID = '0x4cef52';
   const ARC_CHAIN_PARAMS = {
     chainId: ARC_CHAIN_ID,
@@ -283,55 +378,98 @@ async function connectRealWallet() {
   };
 
   try {
-    // 1. Prompt switch or add Arc Testnet
-    try {
-      await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: ARC_CHAIN_ID }]
-      });
-    } catch (switchError) {
-      if (switchError.code === 4902) {
-        await window.ethereum.request({
+    await provider.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: ARC_CHAIN_ID }]
+    });
+  } catch (switchError) {
+    if (switchError.code === 4902 || switchError.message?.includes("Unrecognized chain")) {
+      try {
+        await provider.request({
           method: 'wallet_addEthereumChain',
           params: [ARC_CHAIN_PARAMS]
         });
-      } else {
-        throw switchError;
+      } catch (addError) {
+        console.error("Failed to add Arc Testnet to wallet:", addError);
+        alert("Failed to add Arc Testnet to your wallet. Please add it manually:\nRPC: https://rpc.testnet.arc.network\nChain ID: 5042002");
       }
+    } else {
+      console.error("Failed to switch to Arc Testnet:", switchError);
+      alert("Failed to switch network: " + (switchError.message || switchError));
     }
+  }
+}
 
-    // 2. Request accounts
-    const accounts = await window.ethereum.request({
+function connectMetaMaskMobile() {
+  const cleanUrl = window.location.href.replace(/^http(s)?:\/\//, '');
+  const deepLink = `https://metamask.app.link/dapp/${cleanUrl}`;
+  console.log("Deep-linking to MetaMask Mobile:", deepLink);
+  window.open(deepLink, '_blank');
+}
+
+async function connectRealWallet(method = 'injected') {
+  if (method === 'walletconnect') {
+    try {
+      const provider = await initWalletConnect(true);
+      await provider.connect();
+      if (provider.accounts.length > 0) {
+        await handleWalletConnected(provider.accounts[0], 'walletconnect');
+      }
+    } catch (err) {
+      console.error("WalletConnect connection failed:", err);
+      alert("WalletConnect connection failed: " + (err.message || err));
+    }
+    return;
+  }
+
+  // default 'injected' provider
+  const injected = window.ethereum;
+  if (!injected) {
+    alert("Web3 browser wallet not detected. If you are on mobile, please use WalletConnect or open this page inside your wallet's in-app browser.");
+    return;
+  }
+
+  try {
+    window.activeProvider = injected;
+    await switchNetwork(injected);
+
+    const accounts = await injected.request({
       method: 'eth_requestAccounts'
     });
 
     if (accounts.length > 0) {
-      await handleWalletConnected(accounts[0]);
+      await handleWalletConnected(accounts[0], 'injected');
     }
   } catch (err) {
-    console.error("Wallet connection failed:", err);
+    console.error("Injected wallet connection failed:", err);
     alert("Failed to connect wallet: " + (err.message || err));
   }
 }
 
-async function handleWalletConnected(address) {
+async function handleWalletConnected(address, method) {
   STATE.wallet.connected = true;
   STATE.wallet.address = address;
-
-  // Fetch actual USDC balance
   STATE.wallet.balance = await getUSDCBalance(address);
 
+  localStorage.setItem('jara-wallet-method', method);
   saveWalletState();
   updateWalletNavButton();
   renderWalletModalContent();
   closeModal('wallet-modal');
-  handleRoute(); // reload current view to reflect connected wallet
+  handleRoute();
 }
 
 function disconnectRealWallet() {
   STATE.wallet.connected = false;
   STATE.wallet.address = null;
   STATE.wallet.balance = 0.00;
+  
+  if (window.activeProvider && typeof window.activeProvider.disconnect === 'function') {
+    window.activeProvider.disconnect().catch(() => {});
+  }
+  
+  window.activeProvider = null;
+  localStorage.removeItem('jara-wallet-method');
   saveWalletState();
   updateWalletNavButton();
   renderWalletModalContent();
@@ -340,9 +478,10 @@ function disconnectRealWallet() {
 }
 
 async function checkRealWalletConnection() {
-  if (window.ethereum && STATE.wallet.connected && STATE.wallet.address) {
+  const provider = window.activeProvider || window.ethereum;
+  if (provider && STATE.wallet.connected && STATE.wallet.address) {
     try {
-      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+      const accounts = await provider.request({ method: 'eth_accounts' });
       if (accounts.length > 0) {
         STATE.wallet.connected = true;
         STATE.wallet.address = accounts[0];
@@ -350,12 +489,7 @@ async function checkRealWalletConnection() {
         saveWalletState();
         updateWalletNavButton();
       } else {
-        // Disconnected in extension
-        STATE.wallet.connected = false;
-        STATE.wallet.address = null;
-        STATE.wallet.balance = 0.00;
-        saveWalletState();
-        updateWalletNavButton();
+        disconnectRealWallet();
       }
     } catch (err) {
       console.error("Failed to check wallet connection:", err);
@@ -364,15 +498,15 @@ async function checkRealWalletConnection() {
 }
 
 async function getUSDCBalance(userAddress) {
-  if (!window.ethereum) return 0;
+  const provider = window.activeProvider || window.ethereum;
+  if (!provider) return 0;
 
   const usdcAddress = '0x3600000000000000000000000000000000000000';
-  // balanceOf(address) method signature: 0x70a08231 + 32 bytes padded address
   const paddedAddress = userAddress.slice(2).padStart(64, '0');
   const data = '0x70a08231' + paddedAddress;
 
   try {
-    const balanceHex = await window.ethereum.request({
+    const balanceHex = await provider.request({
       method: 'eth_call',
       params: [{
         to: usdcAddress,
@@ -383,13 +517,11 @@ async function getUSDCBalance(userAddress) {
     if (balanceHex === '0x' || !balanceHex) return 0;
 
     const balanceBigInt = BigInt(balanceHex);
-    // USDC ERC-20 has 6 decimals on Arc Testnet
     return Number(balanceBigInt) / 1e6;
   } catch (err) {
     console.warn("Error fetching USDC ERC20 balance, falling back to native:", err);
-    // Fallback: fetch native gas balance (USDC native, 18 decimals)
     try {
-      const nativeBalanceHex = await window.ethereum.request({
+      const nativeBalanceHex = await provider.request({
         method: 'eth_getBalance',
         params: [userAddress, 'latest']
       });
@@ -419,25 +551,30 @@ async function refreshWalletBalance() {
 }
 
 function setupEthereumProviderListeners() {
-  if (window.ethereum) {
-    window.ethereum.on('accountsChanged', async (accounts) => {
-      if (accounts.length > 0) {
-        STATE.wallet.connected = true;
-        STATE.wallet.address = accounts[0];
-        STATE.wallet.balance = await getUSDCBalance(accounts[0]);
-        saveWalletState();
-        updateWalletNavButton();
-        renderWalletModalContent();
-        handleRoute();
-      } else {
-        disconnectRealWallet();
-      }
-    });
+  const provider = window.activeProvider || window.ethereum;
+  if (provider && typeof provider.on === 'function') {
+    try {
+      provider.on('accountsChanged', async (accounts) => {
+        console.log("Provider accountsChanged:", accounts);
+        if (accounts.length > 0) {
+          STATE.wallet.connected = true;
+          STATE.wallet.address = accounts[0];
+          STATE.wallet.balance = await getUSDCBalance(accounts[0]);
+          saveWalletState();
+          updateWalletNavButton();
+          renderWalletModalContent();
+          handleRoute();
+        } else {
+          disconnectRealWallet();
+        }
+      });
 
-    window.ethereum.on('chainChanged', () => {
-      // Reload page on chain change to reset providers
-      window.location.reload();
-    });
+      provider.on('chainChanged', () => {
+        window.location.reload();
+      });
+    } catch (e) {
+      console.warn("Could not bind events on active provider:", e);
+    }
   }
 }
 
@@ -1830,7 +1967,11 @@ async function executeRealTransaction(to, data, amount, actionDesc, callback) {
       from: STATE.wallet.address,
       data: data,
     };
-    const txHash = await window.ethereum.request({
+    const provider = window.activeProvider || window.ethereum;
+    if (!provider) {
+      throw new Error("EVM Wallet provider not found. Please connect your wallet.");
+    }
+    const txHash = await provider.request({
       method: 'eth_sendTransaction',
       params: [transactionParameters],
     });
@@ -2539,6 +2680,116 @@ function renderWalletView(container) {
       </div>
     </div>
   `;
+}
+
+function renderUseCasesView(container) {
+  container.innerHTML = `
+    <div style="margin-bottom: 40px; text-align: center;">
+      <h1 style="font-size: 38px; margin-bottom: 8px;">Ecosystem Use Cases</h1>
+      <p style="color: var(--text-secondary); max-width: 650px; margin: 0 auto; font-size: 15px; line-height: 1.6;">
+        Explore how various industries and local brands deploy gasless stablecoin pools to coordinate high-fidelity physical audits, local index tracking, and community campaigns.
+      </p>
+    </div>
+
+    <div class="use-cases-grid">
+      <!-- Use Case 1: Balogun Market Audits -->
+      <div class="use-case-card">
+        <div>
+          <div class="use-case-icon-wrapper teal">
+            <i data-lucide="store" style="width: 24px; height: 24px;"></i>
+          </div>
+          <h3 class="use-case-title">Balogun Market Audits</h3>
+          <p class="use-case-desc">
+            Consumer packaged goods (CPG) distributors and retail brands deploy task pools for local market merchants and shoppers to audit product availability, wholesale pricing ceilings, and competitor placements.
+          </p>
+          <div class="use-case-impact-box teal">
+            <span class="use-case-impact-label">Community Impact</span>
+            <span class="use-case-impact-text">Provides high-fidelity retail intelligence while distributing micro-incentives to local traders.</span>
+          </div>
+        </div>
+        <div class="use-case-rewards-bar">
+          <span class="use-case-reward-label">Avg. Escrow Pool Reward</span>
+          <div style="text-align: right;">
+            <span class="use-case-reward-val">$0.50 USDC</span>
+            <span class="use-case-reward-nano">500,000 nanoUSDC</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Use Case 2: Ikeja Tech Store Surveys -->
+      <div class="use-case-card">
+        <div>
+          <div class="use-case-icon-wrapper purple">
+            <i data-lucide="clipboard-list" style="width: 24px; height: 24px;"></i>
+          </div>
+          <h3 class="use-case-title">Ikeja Tech Store Surveys</h3>
+          <p class="use-case-desc">
+            Electronics dealers and repair hubs collect real-time customer satisfaction metrics and walk-in shopper queue durations directly from the floor, bypassing biased agency reporting.
+          </p>
+          <div class="use-case-impact-box">
+            <span class="use-case-impact-label">Community Impact</span>
+            <span class="use-case-impact-text">Empowers shoppers to monetize their immediate attention and feedback in real-time.</span>
+          </div>
+        </div>
+        <div class="use-case-rewards-bar">
+          <span class="use-case-reward-label">Avg. Escrow Pool Reward</span>
+          <div style="text-align: right;">
+            <span class="use-case-reward-val">$0.25 USDC</span>
+            <span class="use-case-reward-nano">250,000 nanoUSDC</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Use Case 3: Yaba Hub Beta Testing -->
+      <div class="use-case-card">
+        <div>
+          <div class="use-case-icon-wrapper pink">
+            <i data-lucide="smartphone" style="width: 24px; height: 24px;"></i>
+          </div>
+          <h3 class="use-case-title">Yaba Hub Beta Testing</h3>
+          <p class="use-case-desc">
+            Fintech startups and mobile app builders deploy test scopes to local community members, verifying transaction steps, load times, and translations on real low-bandwidth devices.
+          </p>
+          <div class="use-case-impact-box pink">
+            <span class="use-case-impact-label">Community Impact</span>
+            <span class="use-case-impact-text">Allows developers to optimize for local hardware while rewarding users for technical feedback.</span>
+          </div>
+        </div>
+        <div class="use-case-rewards-bar">
+          <span class="use-case-reward-label">Avg. Escrow Pool Reward</span>
+          <div style="text-align: right;">
+            <span class="use-case-reward-val">$1.50 USDC</span>
+            <span class="use-case-reward-nano">1,500,000 nanoUSDC</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Use Case 4: VI Restaurant Promos -->
+      <div class="use-case-card">
+        <div>
+          <div class="use-case-icon-wrapper amber">
+            <i data-lucide="megaphone" style="width: 24px; height: 24px;"></i>
+          </div>
+          <h3 class="use-case-title">VI Restaurant Promos</h3>
+          <p class="use-case-desc">
+            Food and hospitality brands launch organic localized marketing campaigns by rewarding earners for geotagged social check-ins and menu items reviews.
+          </p>
+          <div class="use-case-impact-box amber">
+            <span class="use-case-impact-label">Community Impact</span>
+            <span class="use-case-impact-text">Rewards micro-influencers and patrons for authentic physical check-ins and endorsements.</span>
+          </div>
+        </div>
+        <div class="use-case-rewards-bar">
+          <span class="use-case-reward-label">Avg. Escrow Pool Reward</span>
+          <div style="text-align: right;">
+            <span class="use-case-reward-val">$0.75 USDC</span>
+            <span class="use-case-reward-nano">750,000 nanoUSDC</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  lucide.createIcons();
 }
 
 window.renderUseCasesView = renderUseCasesView;
