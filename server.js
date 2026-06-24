@@ -9,9 +9,9 @@ const port = process.env.PORT || 8001;
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('sslmode=require')
-        ? { rejectUnauthorized: false }
-        : undefined
+    ssl: process.env.DATABASE_URL && (process.env.DATABASE_URL.includes('localhost') || process.env.DATABASE_URL.includes('127.0.0.1'))
+        ? false
+        : { rejectUnauthorized: false }
 });
 
 app.use(express.json());
@@ -81,6 +81,10 @@ app.patch('/api/tasks/:id', async (req, res) => {
     }
 });
 
-app.listen(port, () => {
-    console.log(`Jara running at http://127.0.0.1:${port}`);
-});
+if (require.main === module) {
+    app.listen(port, () => {
+        console.log(`Jara running at http://127.0.0.1:${port}`);
+    });
+}
+
+module.exports = app;
