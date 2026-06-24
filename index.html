@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Jara | Community Commerce Infrastructure on Arc</title>
   <meta name="description"
     content="Jara is a Community Commerce Infrastructure coordinating and monetizing hyper-local micro-work that was previously uneconomical to reward, powered gaslessly on Arc.">
@@ -42,13 +42,7 @@
         <a href="#/wallet" class="nav-link" id="nav-wallet">Wallet</a>
       </div>
 
-      <!-- Mobile Menu Button -->
-      <button class="mobile-menu-toggle" id="mobile-menu-toggle-btn" aria-label="Toggle Menu" style="display: none;">
-        <i data-lucide="menu"></i>
-      </button>
-
       <!-- Navigation Actions -->
-
       <div class="nav-actions">
         <button class="theme-toggle" id="theme-toggle-btn" title="Toggle Dark/Light Mode">
           <i data-lucide="sun" class="sun-icon"></i>
@@ -152,18 +146,12 @@
       </div>
       <div class="modal-body">
         <div id="wallet-modal-disconnected">
-          <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 14px;">Connect your Web3 wallet to inspect gasless paymasters, escrow contracts, and stablecoin balances on the Arc Network.</p>
-          <div style="display: flex; flex-direction: column; gap: 10px;">
-            <button class="btn btn-primary" id="modal-connect-injected-btn" style="width: 100%; text-align: left; justify-content: flex-start;">
-              <i data-lucide="chrome"></i> Browser Wallet (MetaMask / Rabby)
-            </button>
-            <button class="btn btn-secondary" id="modal-connect-wc-btn" style="width: 100%; text-align: left; justify-content: flex-start;">
-              <i data-lucide="qr-code"></i> WalletConnect (Universal / Mobile)
-            </button>
-            <button class="btn btn-outline" id="modal-connect-mm-mobile-btn" style="width: 100%; text-align: left; justify-content: flex-start; border-color: var(--primary);">
-              <i data-lucide="smartphone"></i> MetaMask Mobile Deep Link
-            </button>
-          </div>
+          <p style="color: var(--text-secondary); margin-bottom: 24px; font-size: 14px;">Connect your Web3 wallet or
+            enable instant session keys to inspect the gasless Paymaster nodes, escrow smart contracts, and stablecoin
+            balances on the Arc Network.</p>
+          <button class="btn btn-primary" id="modal-connect-wallet-btn" style="width: 100%;">
+            <i data-lucide="plug"></i> Connect Web3 Wallet
+          </button>
         </div>
         <div id="wallet-modal-connected" style="display: none;">
           <div
@@ -272,10 +260,9 @@
   </style>
 
   <!-- Application script dependencies -->
-  <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.10.0/dist/index.umd.js"></script>
   <script src="lib/arc-utils.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=3"></script>
 </body>
 
 </html>
