@@ -47,6 +47,32 @@ async function apiUpdateTask(id, updates) {
   return res.json();
 }
 
+async function apiGetSubmissions() {
+  const res = await fetch('/api/submissions');
+  if (!res.ok) throw new Error('Failed to load submissions');
+  return res.json();
+}
+
+async function apiCreateSubmission(submission) {
+  const res = await fetch('/api/submissions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(submission)
+  });
+
+  if (!res.ok) throw new Error('Failed to save submission');
+  return res.json();
+}
+
+async function apiDeleteSubmission(id) {
+  const res = await fetch(`/api/submissions/${id}`, {
+    method: 'DELETE'
+  });
+
+  if (!res.ok) throw new Error('Failed to delete submission');
+  return res.json();
+}
+
 function mapRecordToTask(r) {
   return {
     ...r,
@@ -94,6 +120,32 @@ const ESCROW_HOLDING_ADDRESS = '0x3d7ffed295e555052233544ba74eaa1c0920fa20';
 // encodeERC20Transfer, waitForTxReceipt, and calculateHaversineDistance are now
 // imported from lib/arc-utils.js and accessed via window.ArcUtils namespace.
 
+// --- SYNC SUBMISSIONS STATE ---
+function syncSubmissionsState(subRecords) {
+  if (STATE.wallet.connected && STATE.wallet.address) {
+    const userAddr = STATE.wallet.address.toLowerCase();
+    STATE.myClaims = subRecords
+      .filter(s => s.earnerAddress && s.earnerAddress.toLowerCase() === userAddr)
+      .map(s => {
+        let status = s.status;
+        if (status === 'approved') status = 'completed';
+        if (status === 'rejected') status = 'claimed'; // Let them submit proof again if rejected
+        return {
+          taskId: s.taskId,
+          status: status,
+          proof: s.proof || '',
+          proofData: s.proofData || {},
+          timestamp: s.timestamp ? new Date(s.timestamp).getTime() : Date.now(),
+          txHash: s.txHash
+        };
+      });
+  } else {
+    STATE.myClaims = [];
+  }
+
+  STATE.submissions = subRecords.filter(s => s.status === 'pending');
+}
+
 // --- INITIALIZE APPLICATION ---
 document.addEventListener('DOMContentLoaded', () => {
   // Apply initial theme
@@ -117,21 +169,22 @@ document.addEventListener('DOMContentLoaded', () => {
   // Setup Metamask event listeners
   setupEthereumProviderListeners();
 
-  // Initial Route Load & Task Fetch
-  apiGetTasks()
-    .then(records => {
+  // Initial Route Load, Task & Submissions Fetch
+  Promise.all([apiGetTasks(), apiGetSubmissions()])
+    .then(([records, subRecords]) => {
       STATE.tasks = records.map(mapRecordToTask);
+      syncSubmissionsState(subRecords);
       handleRoute();
     })
     .catch(err => {
-      console.warn('Failed to fetch initial tasks from PostgreSQL API:', err);
+      console.warn('Failed to fetch initial data from PostgreSQL API:', err);
       handleRoute();
     });
 
-  // Short polling to fetch task updates in real-time
+  // Short polling to fetch updates in real-time
   setInterval(() => {
-    apiGetTasks()
-      .then(records => {
+    Promise.all([apiGetTasks(), apiGetSubmissions()])
+      .then(([records, subRecords]) => {
         const newTasks = records.map(mapRecordToTask);
         let hasChanges = newTasks.length !== STATE.tasks.length;
         if (!hasChanges) {
@@ -142,12 +195,28 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           }
         }
+
+        // Check if submissions list changed
+        const oldPendingIds = STATE.submissions.map(s => s.id).sort().join(',');
+        const newPending = subRecords.filter(s => s.status === 'pending');
+        const newPendingIds = newPending.map(s => s.id).sort().join(',');
+        if (oldPendingIds !== newPendingIds) {
+          hasChanges = true;
+        }
+
+        // Check if current user claims changed
+        const oldClaimsCount = STATE.myClaims.length;
+        syncSubmissionsState(subRecords);
+        if (STATE.myClaims.length !== oldClaimsCount) {
+          hasChanges = true;
+        }
+
         if (hasChanges) {
           STATE.tasks = newTasks;
           handleRoute();
         }
       })
-      .catch(err => console.warn('Polling tasks failed:', err));
+      .catch(err => console.warn('Polling updates failed:', err));
   }, 8000);
 });
 
@@ -349,6 +418,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Fetch actual USDC balance
     STATE.wallet.balance = await getUSDCBalance(address);
 
+    // Sync submissions
+    try {
+      const subRecords = await apiGetSubmissions();
+      syncSubmissionsState(subRecords);
+    } catch (e) {
+      console.warn("Failed to load user submissions after connecting:", e);
+    }
+
     saveWalletState();
     updateWalletNavButton();
     renderWalletModalContent();
@@ -375,6 +452,15 @@ document.addEventListener('DOMContentLoaded', () => {
           STATE.wallet.connected = true;
           STATE.wallet.address = accounts[0];
           STATE.wallet.balance = await getUSDCBalance(accounts[0]);
+
+          // Sync submissions
+          try {
+            const subRecords = await apiGetSubmissions();
+            syncSubmissionsState(subRecords);
+          } catch (e) {
+            console.warn("Failed to load user submissions on checking connection:", e);
+          }
+
           saveWalletState();
           updateWalletNavButton();
         } else {
@@ -1532,12 +1618,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function claimTaskInModal(taskId) {
     if (!STATE.wallet.connected) return;
+    const task = STATE.tasks.find(t => t.id === taskId);
+    const newId = `sub-${STATE.wallet.address.toLowerCase()}-${taskId}`;
+    const timestampStr = new Date().toISOString();
+
     STATE.myClaims.push({
       taskId: taskId,
       status: 'claimed',
       proof: '',
       timestamp: Date.now()
     });
+
+    const dbClaim = {
+      id: newId,
+      taskId: taskId,
+      taskTitle: task ? task.title : '',
+      earnerAddress: STATE.wallet.address,
+      proof: '',
+      proofData: {},
+      timestamp: timestampStr,
+      reward: task ? task.reward : 0,
+      status: 'claimed'
+    };
+
+    apiCreateSubmission(dbClaim).catch(err => {
+      console.error('Postgres claim save failed:', err);
+    });
+
     closeModal('task-modal');
     handleRoute();
   }
@@ -1642,8 +1749,9 @@ document.addEventListener('DOMContentLoaded', () => {
       claim.timestamp = Date.now();
     }
 
-    STATE.submissions.unshift({
-      id: `sub-${Date.now()}`,
+    const submissionId = `sub-${STATE.wallet.address.toLowerCase()}-${taskId}`;
+    const newSub = {
+      id: submissionId,
       taskId: taskId,
       taskTitle: task.title,
       earnerAddress: STATE.wallet.address,
@@ -1652,6 +1760,12 @@ document.addEventListener('DOMContentLoaded', () => {
       timestamp: new Date().toISOString(),
       reward: task.reward,
       status: 'pending'
+    };
+
+    STATE.submissions.unshift(newSub);
+
+    apiCreateSubmission(newSub).catch(err => {
+      console.error('Postgres submission save failed:', err);
     });
 
     closeModal('task-modal');
@@ -2219,6 +2333,12 @@ document.addEventListener('DOMContentLoaded', () => {
       async (txHash, receipt) => {
         // Process approval state
         sub.status = 'approved';
+        sub.txHash = txHash;
+
+        // Persist status change to Postgres
+        await apiCreateSubmission(sub).catch(err => {
+          console.error('Failed to update submission status in Postgres:', err);
+        });
 
         // Find task and update counts
         if (task) {
@@ -2268,6 +2388,14 @@ document.addEventListener('DOMContentLoaded', () => {
   function rejectSubmission(subId) {
     const confirmation = confirm('Are you sure you want to reject this submission? It will be removed from review inbox.');
     if (confirmation) {
+      const sub = STATE.submissions.find(s => s.id === subId);
+      if (sub) {
+        sub.status = 'rejected';
+        apiCreateSubmission(sub).catch(err => {
+          console.error('Failed to update rejected status in Postgres:', err);
+        });
+      }
+
       STATE.submissions = STATE.submissions.filter(s => s.id !== subId);
       handleRoute();
     }
